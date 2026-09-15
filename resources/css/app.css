@@ -1,0 +1,37 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    --color-maroon-950: #2b070d;
+    --color-maroon-900: #4a0e18;
+    --color-maroon-800: #6b1424;
+    --color-maroon-700: #8a1c30;
+    --color-maroon-600: #a4283c;
+    --color-maroon-500: #c43b50;
+    --color-cream-50: #fdf7f4;
+    --color-cream-100: #f6ebe6;
+    --color-gold-400: #d4b36a;
+    --color-gold-500: #c4a35a;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    min-height: 100%;
+    background: var(--color-cream-50);
+    color: var(--color-maroon-950);
+}
+
+.hero-panel {
+    background:
+        radial-gradient(900px 380px at 8% 0%, rgba(196, 163, 90, 0.16), transparent 55%),
+        radial-gradient(700px 320px at 92% 12%, rgba(107, 20, 36, 0.06), transparent 50%),
+        var(--color-cream-50);
+}

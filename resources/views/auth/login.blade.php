@@ -1,0 +1,29 @@
+@extends('layouts.app')
+
+@section('title', 'Staff login')
+
+@section('content')
+<x-page-shell eyebrow="Staff" title="Staff login">
+    <x-slot:lead>
+        For Department Head, SASO, Campus Director, Registrar, and Guidance. Students use Request LOA instead.
+    </x-slot:lead>
+
+    <form method="POST" action="{{ route('login.store') }}" class="space-y-4 rounded-2xl border border-maroon-900/10 bg-white p-6 sm:p-8">
+        @csrf
+        <div>
+            <label for="email" class="block text-sm font-medium text-maroon-900">EVSU email</label>
+            <input id="email" name="email" type="email" value="{{ old('email') }}" required autofocus
+                placeholder="name@evsu.edu.ph"
+                class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none ring-maroon-700 focus:ring-2">
+            @error('email') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
+        </div>
+        <x-password-field id="password" name="password" label="Password" placeholder="Enter your password" class="text-base" />
+        <label class="flex items-center gap-2 text-sm text-maroon-800">
+            <input type="checkbox" name="remember" class="rounded border-maroon-900/30">
+            Remember me
+        </label>
+        <button type="submit" class="w-full rounded-xl bg-maroon-800 px-4 py-3.5 text-base font-semibold text-cream-50 hover:bg-maroon-700">Log in</button>
+        <p class="text-center text-sm text-maroon-800/80">No account yet? <a href="{{ route('register') }}" class="font-semibold text-maroon-700">Register</a></p>
+    </form>
+</x-page-shell>
+@endsection
