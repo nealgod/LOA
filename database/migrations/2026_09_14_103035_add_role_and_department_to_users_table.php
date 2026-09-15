@@ -9,7 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('role', 40)->default('administrator')->after('password');
+            // Default to 'guidance' (lowest privilege) — never 'administrator'.
+            // A wrong default of 'administrator' would silently grant the Policy's
+            // before() bypass to any row inserted without an explicit role.
+            $table->string('role', 40)->default('guidance')->after('password');
             $table->foreignId('department_id')->nullable()->after('role')->constrained()->nullOnDelete();
         });
     }

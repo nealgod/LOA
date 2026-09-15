@@ -56,7 +56,9 @@
 
             <nav class="hidden items-center gap-2 md:flex">
                 <a href="{{ route('home') }}#about" class="rounded-md px-3 py-2 text-sm text-cream-100 hover:bg-white/10">About</a>
-                <a href="{{ route('student.identity') }}" class="rounded-md bg-gold-500 px-3 py-2 text-sm font-semibold text-maroon-950 hover:bg-gold-400">Request LOA</a>
+                @guest
+                    <a href="{{ route('student.identity') }}" class="rounded-md bg-gold-500 px-3 py-2 text-sm font-semibold text-maroon-950 hover:bg-gold-400">Request LOA</a>
+                @endguest
                 @auth
                     <a href="{{ route('staff.dashboard') }}" class="rounded-md px-3 py-2 text-sm hover:bg-white/10">Dashboard</a>
                     <form method="POST" action="{{ route('logout') }}">
@@ -71,7 +73,9 @@
         </div>
         <nav class="hidden flex-col gap-1 border-t border-white/10 px-4 py-3 sm:px-8 md:hidden lg:px-10" data-nav-panel>
             <a href="{{ route('home') }}#about" class="rounded-md px-3 py-2 text-sm text-cream-100">About</a>
-            <a href="{{ route('student.identity') }}" class="rounded-md bg-gold-500 px-3 py-2 text-sm font-semibold text-maroon-950">Request LOA</a>
+            @guest
+                <a href="{{ route('student.identity') }}" class="rounded-md bg-gold-500 px-3 py-2 text-sm font-semibold text-maroon-950">Request LOA</a>
+            @endguest
             @auth
                 <a href="{{ route('staff.dashboard') }}" class="rounded-md px-3 py-2 text-sm">Dashboard</a>
                 <form method="POST" action="{{ route('logout') }}">
@@ -98,7 +102,14 @@
     <footer class="mt-auto border-t border-maroon-900/10 bg-maroon-950 text-cream-100">
         <div class="mx-auto flex max-w-7xl flex-col gap-2 px-4 py-8 text-sm sm:px-8 lg:px-10 md:flex-row md:items-center md:justify-between">
             <p>LeaveFlow · Eastern Visayas State University — Ormoc Campus</p>
-            <p class="text-cream-100/70">Leave of Absence requests for students. Staff portal for review and approval.</p>
+            <div class="flex flex-col gap-1 md:items-end">
+                <p class="text-cream-100/70">Leave of Absence requests for students. Staff portal for review and approval.</p>
+                @auth
+                    <p class="text-xs text-cream-100/40">
+                        [Role: {{ auth()->user()->role->value }}@if (auth()->user()->department_id) · Dept: {{ auth()->user()->department->code ?? '?' }}@endif]
+                    </p>
+                @endauth
+            </div>
         </div>
     </footer>
     @unless (file_exists(public_path('build/manifest.json')) || file_exists(public_path('hot')))

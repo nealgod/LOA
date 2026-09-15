@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Enums\ApprovalStageStatus;
 use App\Mail\LoaSubmittedMail;
 use App\Models\Department;
 use App\Models\LoaAccessToken;
@@ -113,17 +114,25 @@ class LoaFormController extends Controller
             ]);
             $loa->assignControlNumber();
             $loa->status = 'submitted';
+            $loa->dept_head_status = ApprovalStageStatus::Pending;
             $loa->submitted_at = now();
             $loa->save();
 
             foreach ($request->file('attachments', []) as $file) {
                 $path = $file->store('loa-attachments/'.$loa->id, 'local');
 
+                // Use server-side finfo detection — never trust the client-supplied MIME type.
+                // Sanitize the original filename to prevent path traversal and null bytes.
+                $safeName = mb_substr(
+                    preg_replace('/[^\w.\-_ ]/u', '_', basename((string) $file->getClientOriginalName())),
+                    0, 255
+                );
+
                 $loa->attachments()->create([
-                    'original_name' => $file->getClientOriginalName(),
-                    'path' => $path,
-                    'mime_type' => $file->getClientMimeType() ?: $file->getMimeType(),
-                    'size' => $file->getSize(),
+                    'original_name' => $safeName ?: 'attachment',
+                    'path'          => $path,
+                    'mime_type'     => $file->getMimeType() ?? 'application/octet-stream',
+                    'size'          => $file->getSize(),
                 ]);
             }
 

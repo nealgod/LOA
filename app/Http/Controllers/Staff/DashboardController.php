@@ -13,17 +13,17 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
 
-        $query = LoaRequest::query()
-            ->with(['department', 'program'])
-            ->where('status', 'submitted')
-            ->latest('submitted_at');
+        $loas = LoaRequest::query()
+            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor'])
+            ->scopeForUser($user)
+            ->latest('submitted_at')
+            ->get();
 
-        if ($user->role === UserRole::DepartmentHead) {
-            $query->where('department_id', $user->department_id);
-        }
+        $stats = [
+            'total' => $loas->count(),
+            'activeRole' => $user->role->label(),
+        ];
 
-        return view('staff.dashboard', [
-            'requests' => $query->get(),
-        ]);
+        return view('staff.dashboard', compact('user', 'loas', 'stats'));
     }
 }

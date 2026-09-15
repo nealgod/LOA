@@ -13,17 +13,33 @@
                 verify with your EVSU email, then track your application with a Control Number.
             </p>
             <div class="mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <a href="{{ route('student.identity') }}" class="inline-flex items-center justify-center rounded-xl bg-maroon-800 px-6 py-3.5 text-center text-base font-semibold text-cream-50 hover:bg-maroon-700">
-                    Request LOA
-                </a>
-                <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl border border-maroon-800/20 bg-white px-6 py-3.5 text-center text-base font-semibold text-maroon-900 hover:bg-cream-100">
-                    Staff login
-                </a>
-                <a href="{{ route('register') }}" class="inline-flex items-center justify-center rounded-xl px-6 py-3.5 text-center text-base font-medium text-maroon-800 hover:bg-cream-100">
-                    Staff register
-                </a>
+                @guest
+                    <a href="{{ route('student.identity') }}" class="inline-flex items-center justify-center rounded-xl bg-maroon-800 px-6 py-3.5 text-center text-base font-semibold text-cream-50 hover:bg-maroon-700">
+                        Request LOA
+                    </a>
+                    <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl border border-maroon-800/20 bg-white px-6 py-3.5 text-center text-base font-semibold text-maroon-900 hover:bg-cream-100">
+                        Staff login
+                    </a>
+                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center rounded-xl px-6 py-3.5 text-center text-base font-medium text-maroon-800 hover:bg-cream-100">
+                        Staff register
+                    </a>
+                @else
+                    <a href="{{ route('staff.dashboard') }}" class="inline-flex items-center justify-center rounded-xl bg-maroon-800 px-6 py-3.5 text-center text-base font-semibold text-cream-50 hover:bg-maroon-700">
+                        Go to Dashboard
+                    </a>
+                    <form method="POST" action="{{ route('logout') }}" class="inline-flex">
+                        @csrf
+                        <button type="submit" class="inline-flex items-center justify-center rounded-xl border border-maroon-800/20 bg-white px-6 py-3.5 text-center text-base font-semibold text-maroon-900 hover:bg-cream-100">
+                            Log out
+                        </button>
+                    </form>
+                @endguest
             </div>
-            <p class="mt-5 text-sm text-maroon-800/70">Students do not create an account. Staff (Department Head, SASO, Campus Director, Registrar, Guidance) sign in here.</p>
+            @guest
+                <p class="mt-5 text-sm text-maroon-800/70">Students do not create an account. Staff (Department Head, SASO, Campus Director, Registrar, Guidance) sign in here.</p>
+            @else
+                <p class="mt-5 text-sm text-maroon-800/70">Signed in as <strong>{{ auth()->user()->name }}</strong> &middot; {{ auth()->user()->role->label() }}.</p>
+            @endguest
         </div>
 
         <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 sm:p-8 lg:p-10">

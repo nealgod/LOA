@@ -76,6 +76,9 @@ class StudentLoaRequestFlowTest extends TestCase
             'status' => 'submitted',
             'department_id' => $department->id,
             'program_id' => $program->id,
+            'dept_head_status' => 'pending',
+            'saso_status' => null,
+            'campus_director_status' => null,
         ]);
 
         $this->assertSame(2, LoaRequest::query()->first()->attachments()->count());

@@ -30,6 +30,11 @@ enum UserRole: string
         return $this === self::DepartmentHead;
     }
 
+    public function is(self $other): bool
+    {
+        return $this === $other;
+    }
+
     /** Student is separate. These five are the staff offices on register/login. */
     public static function staffRoles(): array
     {

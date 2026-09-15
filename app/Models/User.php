@@ -43,7 +43,7 @@ class User extends Authenticatable
 
     public function canViewLoaRequest(LoaRequest $request): bool
     {
-        if ($this->role === UserRole::DepartmentHead) {
+        if ($this->role->is(UserRole::DepartmentHead)) {
             return $this->department_id !== null
                 && $request->department_id === $this->department_id;
         }
