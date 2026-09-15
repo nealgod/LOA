@@ -82,9 +82,9 @@ class LoaRequest extends Model
         $year = now()->year;
         $sequence = static::query()
             ->whereNotNull('control_number')
-            ->where('control_number', 'like', "EVSU-OR-LOA-{$year}-%")
+            ->where('control_number', 'like', "EVSU-OC-LOA-{$year}-%")
             ->count() + 1;
 
-        $this->control_number = sprintf('EVSU-OR-LOA-%d-%04d', $year, $sequence);
+        $this->control_number = sprintf('EVSU-OC-LOA-%d-%04d', $year, $sequence);
     }
 }

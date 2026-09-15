@@ -62,7 +62,7 @@
     <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
         @foreach ([
             ['Public request', 'No student portal. Identity is confirmed through your official EVSU email link.'],
-            ['Control Number', 'Each application gets an ID such as EVSU-OR-LOA-2026-0001 for tracking and the PDF.'],
+            ['Control Number', 'Each application gets an ID such as EVSU-OC-LOA-2026-0001 for tracking and the PDF.'],
             ['Multi-level review', 'Department Head (parent call) → SASO Officer → Campus Director final approval.'],
             ['Registrar & Guidance', 'After approval, classes are marked Withdrawn and Guidance records exit counseling.'],
             ['Return follow-up', 'Seven days before your return date, you confirm if you are coming back.'],

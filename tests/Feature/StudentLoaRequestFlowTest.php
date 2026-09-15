@@ -79,6 +79,6 @@ class StudentLoaRequestFlowTest extends TestCase
         ]);
 
         $this->assertSame(2, LoaRequest::query()->first()->attachments()->count());
-        $this->assertStringStartsWith('EVSU-OR-LOA-2026-', LoaRequest::query()->first()->control_number);
+        $this->assertStringStartsWith('EVSU-OC-LOA-2026-', LoaRequest::query()->first()->control_number);
     }
 }
