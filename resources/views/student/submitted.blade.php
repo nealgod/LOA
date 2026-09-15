@@ -3,16 +3,71 @@
 @section('title', 'Request submitted')
 
 @section('content')
-<x-page-shell eyebrow="Submitted" title="Your Control Number">
-    <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 sm:p-8">
-        <p class="rounded-xl bg-maroon-900 px-4 py-4 text-center font-mono text-lg tracking-wide text-gold-400">
-            {{ $loa->control_number }}
-        </p>
-        <p class="mt-4 text-base leading-relaxed text-maroon-800/80">
-            Keep this number. Your Department Head will review next, including the parent/guardian verification call.
-            A confirmation email path will be completed when outbound mail is configured.
-        </p>
-        <a href="{{ route('home') }}" class="mt-8 inline-flex text-sm font-semibold text-maroon-700">Back to home</a>
+<x-page-shell eyebrow="EVSU-SASO-F-040 · Submitted" title="Your LOA has been received" width="2xl">
+    <x-slot:lead>
+        A confirmation has been sent to <strong>{{ $loa->email }}</strong> with a copy of your submitted details.
+    </x-slot:lead>
+
+    <div class="space-y-4 rounded-2xl border border-maroon-900/10 bg-white p-6 sm:p-8">
+
+        {{-- Control number --}}
+        <div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-maroon-700">Control Number</p>
+            <p class="mt-1 rounded-xl bg-maroon-900 px-4 py-4 text-center font-mono text-xl tracking-wider text-gold-400">
+                {{ $loa->control_number }}
+            </p>
+            <p class="mt-2 text-center text-xs text-maroon-800/60">Keep this number — you will need it to follow up on your request.</p>
+        </div>
+
+        <hr class="border-maroon-900/10">
+
+        {{-- Form summary --}}
+        <div>
+            <p class="mb-3 text-sm font-semibold text-maroon-900">Submitted details</p>
+            <dl class="space-y-2 text-sm text-maroon-800/80">
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Student ID</dt>
+                    <dd>{{ $loa->student_id }}</dd>
+                </div>
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Full name</dt>
+                    <dd>{{ $loa->full_name }}</dd>
+                </div>
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Department</dt>
+                    <dd>{{ $loa->department?->name ?? '—' }}</dd>
+                </div>
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Program</dt>
+                    <dd>{{ $loa->program?->name ?? '—' }}</dd>
+                </div>
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Year level</dt>
+                    <dd>{{ $loa->year_level ?? '—' }}</dd>
+                </div>
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Leave period</dt>
+                    <dd>{{ $loa->start_date?->format('M j, Y') }} — {{ $loa->return_date?->format('M j, Y') }}</dd>
+                </div>
+                <div class="flex gap-2">
+                    <dt class="w-36 shrink-0 font-medium text-maroon-900">Submitted</dt>
+                    <dd>{{ $loa->submitted_at?->format('M j, Y g:i A') }}</dd>
+                </div>
+            </dl>
+        </div>
+
+        <hr class="border-maroon-900/10">
+
+        {{-- What happens next --}}
+        <div>
+            <p class="mb-2 text-sm font-semibold text-maroon-900">What happens next</p>
+            <p class="text-sm leading-relaxed text-maroon-800/80">
+                Your Department Head will review your application and may contact your parent or guardian at the number you provided.
+                You will receive email updates as your request moves through each approval step.
+            </p>
+        </div>
+
+        <a href="{{ route('home') }}" class="inline-flex pt-2 text-sm font-semibold text-maroon-700">Back to home</a>
     </div>
 </x-page-shell>
 @endsection

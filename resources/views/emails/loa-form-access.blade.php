@@ -20,7 +20,7 @@
                         <td style="padding:32px;">
                             <p style="margin:0 0 12px;font-size:16px;line-height:1.6;color:#2b070d;">Hello {{ $accessToken->full_name }},</p>
                             <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#4a0e18;">
-                                Your identity was received for a Leave of Absence request. Open the form with the button below to continue EVSU-SASO-F-040. This private link expires in 24 hours.
+                                Use the button below to open your Leave of Absence form (EVSU-SASO-F-040). Complete it as soon as you can. The link stops working one day after this email is sent.
                             </p>
                             <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:0 auto 28px;">
                                 <tr>
@@ -32,8 +32,8 @@
                                 </tr>
                             </table>
                             <p style="margin:0 0 8px;font-size:13px;line-height:1.6;color:#8a1c30;">Student ID: {{ $accessToken->student_id }}</p>
-                            <p style="margin:0;font-size:12px;line-height:1.6;color:#8a1c30;">If the button does not work, copy and paste this link into your browser:</p>
-                            <p style="margin:8px 0 0;font-size:12px;line-height:1.5;word-break:break-all;color:#6b1424;">{{ $formUrl }}</p>
+                            <p style="margin:0;font-size:12px;line-height:1.6;color:#8a1c30;">If the button does not open the form, copy the full address below into your browser (one line, nothing missing):</p>
+                            <p style="margin:8px 0 0;font-size:12px;line-height:1.5;color:#6b1424;"><a href="{{ $formUrl }}" style="color:#6b1424;text-decoration:underline;word-break:break-all;">{{ $formUrl }}</a></p>
                         </td>
                     </tr>
                     <tr>

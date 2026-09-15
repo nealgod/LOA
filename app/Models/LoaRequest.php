@@ -16,6 +16,7 @@ class LoaRequest extends Model
         'email',
         'department_id',
         'program_id',
+        'year_level',
         'start_date',
         'return_date',
         'reason',
@@ -58,6 +59,18 @@ class LoaRequest extends Model
     public function isSubmitted(): bool
     {
         return $this->status !== 'draft' && filled($this->control_number);
+    }
+
+    public function scopeBlockingNewRequest($query)
+    {
+        return $query
+            ->whereNotIn('status', ['rejected', 'discontinued'])
+            ->where(function ($q) {
+                $q->where('status', '!=', 'draft')
+                    ->orWhereHas('accessToken', function ($token) {
+                        $token->where('expires_at', '>', now())->whereNull('used_at');
+                    });
+            });
     }
 
     public function assignControlNumber(): void

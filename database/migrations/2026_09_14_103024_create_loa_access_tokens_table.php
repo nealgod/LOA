@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('full_name');
             $table->string('email');
             $table->string('token_hash', 64)->unique();
-            $table->timestamp('expires_at');
-            $table->timestamp('used_at')->nullable();
+            $table->dateTime('expires_at');
+            $table->dateTime('used_at')->nullable();
             $table->string('ip_address', 45)->nullable();
             $table->timestamps();
         });

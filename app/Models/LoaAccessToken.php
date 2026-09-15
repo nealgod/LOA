@@ -43,12 +43,14 @@ class LoaAccessToken extends Model
 
     public static function issue(array $identity, ?string $ipAddress = null): array
     {
-        $plainToken = Str::random(64);
+        // 40 chars = 320 bits of entropy — shorter URLs are less likely to be
+        // line-wrapped by email clients, which was causing "invalid link" errors.
+        $plainToken = Str::random(40);
 
         $record = self::create([
             'student_id' => $identity['student_id'],
-            'full_name' => $identity['full_name'],
-            'email' => $identity['email'],
+            'full_name'  => $identity['full_name'],
+            'email'      => $identity['email'],
             'token_hash' => self::hashPlainToken($plainToken),
             'expires_at' => now()->addHours(24),
             'ip_address' => $ipAddress,

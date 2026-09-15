@@ -12,6 +12,7 @@
         <p><span class="font-semibold text-maroon-900">Student ID:</span> {{ $loa->student_id }}</p>
         <p><span class="font-semibold text-maroon-900">Email:</span> {{ $loa->email }}</p>
         <p><span class="font-semibold text-maroon-900">Leave:</span> {{ $loa->start_date?->format('M j, Y') }} to {{ $loa->return_date?->format('M j, Y') }}</p>
+        <p><span class="font-semibold text-maroon-900">Year level:</span> {{ $loa->year_level ?? '—' }}</p>
         <p><span class="font-semibold text-maroon-900">Reason:</span> {{ $loa->reason }}</p>
         <p><span class="font-semibold text-maroon-900">Parent/guardian:</span> {{ $loa->parent_full_name }} ({{ $loa->parent_relationship }}) · {{ $loa->parent_phone }}</p>
 

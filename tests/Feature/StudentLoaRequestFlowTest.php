@@ -37,6 +37,12 @@ class StudentLoaRequestFlowTest extends TestCase
             'email' => 'juan@evsu.edu.ph',
         ])->assertRedirect(route('student.identity.sent'));
 
+        $this->from(route('student.identity'))->post('/loa/request', [
+            'student_id' => '2021-0001',
+            'full_name' => 'Juan Dela Cruz',
+            'email' => 'juan@evsu.edu.ph',
+        ])->assertSessionHasErrors(['student_id', 'email']);
+
         Mail::assertSent(LoaFormAccessMail::class);
 
         $mail = Mail::sent(LoaFormAccessMail::class)->first();
@@ -49,14 +55,16 @@ class StudentLoaRequestFlowTest extends TestCase
             ->assertSee('Department of Computer Studies');
 
         $this->post(route('student.form.store', $token), [
+            'full_name' => 'Juan Dela Cruz',
             'department_id' => $department->id,
             'program_id' => $program->id,
+            'year_level' => 'BSIT-1st',
             'start_date' => '2026-10-01',
             'return_date' => '2027-03-01',
             'reason' => 'Medical treatment requiring extended recovery.',
             'parent_full_name' => 'Maria Dela Cruz',
             'parent_relationship' => 'Mother',
-            'parent_phone' => '09171234567',
+            'parent_phone' => '917-123-4567',
             'attachments' => [
                 UploadedFile::fake()->create('medical.pdf', 120, 'application/pdf'),
                 UploadedFile::fake()->image('id.jpg'),
