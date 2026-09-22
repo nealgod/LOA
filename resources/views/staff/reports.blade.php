@@ -5,22 +5,100 @@
 
 @section('content')
 
-    {{-- ── Filter labels (retained for consistency) ───────────────────────── --}}
-    <div class="mb-6 flex flex-wrap gap-4 rounded-2xl border border-maroon-900/10 bg-white px-5 py-4 shadow-sm">
+    {{-- ── Filters ─────────────────────────────────────────────────────────── --}}
+    <form method="GET" action="{{ route('staff.reports') }}"
+          class="mb-6 flex flex-wrap items-end gap-4 rounded-2xl border border-maroon-900/10 bg-white px-5 py-4 shadow-sm">
+
+        {{-- Year --}}
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Semester</p>
-            <select disabled class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 opacity-60 cursor-not-allowed">
-                <option>All Semesters ({{ now()->year }})</option>
+            <label for="filter-year" class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Year</label>
+            <select id="filter-year" name="year"
+                    class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 focus:outline-none focus:ring-2 focus:ring-maroon-700">
+                @foreach ($years as $yr)
+                    <option value="{{ $yr }}" {{ $filterYear == $yr ? 'selected' : '' }}>{{ $yr }}</option>
+                @endforeach
             </select>
         </div>
+
+        {{-- Department (hidden/fixed for Dept Head) --}}
+        @if ($isDh)
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Department</label>
+                <p class="rounded-lg border border-maroon-900/15 bg-maroon-50 px-3 py-2 text-sm font-semibold text-maroon-900">
+                    {{ auth()->user()->department?->name ?? 'Your Department' }}
+                </p>
+                <input type="hidden" name="department_id" value="{{ $filterDept }}">
+            </div>
+        @else
+            <div>
+                <label for="filter-dept" class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Department</label>
+                <select id="filter-dept" name="department_id"
+                        class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 focus:outline-none focus:ring-2 focus:ring-maroon-700">
+                    <option value="">All Departments</option>
+                    @foreach ($departments as $dept)
+                        <option value="{{ $dept->id }}" {{ $filterDept == $dept->id ? 'selected' : '' }}>
+                            {{ $dept->code }} — {{ $dept->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        @endif
+
+        {{-- Status --}}
         <div>
-            <p class="text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Program / Department</p>
-            <select disabled class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 opacity-60 cursor-not-allowed">
-                <option>All Departments</option>
+            <label for="filter-status" class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Status</label>
+            <select id="filter-status" name="status"
+                    class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 focus:outline-none focus:ring-2 focus:ring-maroon-700">
+                <option value="">All Statuses</option>
+                <option value="submitted"    {{ $filterStatus === 'submitted'    ? 'selected' : '' }}>Under Review</option>
+                <option value="approved"     {{ $filterStatus === 'approved'     ? 'selected' : '' }}>Approved</option>
+                <option value="rejected"     {{ $filterStatus === 'rejected'     ? 'selected' : '' }}>Rejected</option>
+                <option value="discontinued" {{ $filterStatus === 'discontinued' ? 'selected' : '' }}>Discontinued</option>
+                <option value="draft"        {{ $filterStatus === 'draft'        ? 'selected' : '' }}>Draft</option>
             </select>
         </div>
-        <p class="self-end text-xs text-maroon-900/40 italic">Live filters coming in a future release.</p>
-    </div>
+
+        {{-- Apply / Clear --}}
+        <div class="flex gap-2">
+            <button type="submit"
+                    class="rounded-lg bg-maroon-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-maroon-700">
+                Apply
+            </button>
+            @if ($filterDept || $filterStatus || $filterYear != now()->year)
+                <a href="{{ route('staff.reports') }}"
+                   class="rounded-lg border border-maroon-900/20 bg-white px-4 py-2 text-sm font-semibold text-maroon-700 hover:bg-maroon-50">
+                    Clear
+                </a>
+            @endif
+        </div>
+
+        {{-- Active filter tags --}}
+        @if ($filterDept || $filterStatus || $filterYear != now()->year)
+            <div class="flex w-full flex-wrap gap-2 border-t border-maroon-900/8 pt-3">
+                <span class="text-xs text-maroon-900/50 self-center">Filtered by:</span>
+                <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">
+                    Year: {{ $filterYear }}
+                </span>
+                @if ($filterDept && ! $isDh)
+                    @php $deptName = $departments->firstWhere('id', $filterDept)?->code ?? $filterDept; @endphp
+                    <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">
+                        Dept: {{ $deptName }}
+                    </span>
+                @endif
+                @if ($filterStatus)
+                    @php
+                        $statusLabels = [
+                            'submitted' => 'Under Review', 'approved' => 'Approved',
+                            'rejected' => 'Rejected', 'discontinued' => 'Discontinued', 'draft' => 'Draft',
+                        ];
+                    @endphp
+                    <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">
+                        Status: {{ $statusLabels[$filterStatus] ?? ucfirst($filterStatus) }}
+                    </span>
+                @endif
+            </div>
+        @endif
+    </form>
 
     {{-- ── Summary stat cards ──────────────────────────────────────────────── --}}
     <div class="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -39,7 +117,7 @@
             <p class="mt-2 text-4xl font-bold tracking-tight text-maroon-950">
                 {{ $avgProcessingDays }}<span class="text-xl font-medium text-maroon-900/60"> days</span>
             </p>
-            <p class="mt-1 text-xs text-maroon-900/50">Avg submission → CD approval</p>
+            <p class="mt-1 text-xs text-maroon-900/50">Avg submission to final approval</p>
         </div>
         <div class="rounded-2xl border border-maroon-900/10 bg-white p-5 shadow-sm">
             <p class="text-xs font-semibold uppercase tracking-wider text-maroon-900/60">Highest Program</p>
@@ -57,7 +135,7 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
 
-        {{-- ── LOA Volume by Department (real bar chart) ───────────────────── --}}
+        {{-- ── LOA Volume by Department ────────────────────────────────────── --}}
         <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm">
             <h3 class="mb-5 text-sm font-semibold text-maroon-950">Volume by Department</h3>
             @if ($deptRows->sum('count') === 0)
@@ -82,13 +160,14 @@
             @endif
         </div>
 
-        {{-- ── Monthly submission trend (last 6 months) ───────────────────── --}}
+        {{-- ── Monthly submission count (12 months of selected year) ─────────── --}}
         <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm">
-            <h3 class="mb-5 text-sm font-semibold text-maroon-950">Duration Trend — Monthly Submissions</h3>
+            <h3 class="mb-1 text-sm font-semibold text-maroon-950">Monthly Submissions</h3>
+            <p class="mb-4 text-xs text-maroon-900/50">{{ $filterYear }}</p>
             @if ($months->sum('count') === 0)
-                <p class="py-8 text-center text-sm text-maroon-900/40">No submissions in the last 6 months.</p>
+                <p class="py-8 text-center text-sm text-maroon-900/40">No submissions in {{ $filterYear }}.</p>
             @else
-                <div class="flex items-end gap-2 h-40 border-b border-l border-maroon-900/10 px-2 pt-2">
+                <div class="flex items-end gap-1.5 h-40 border-b border-l border-maroon-900/10 px-2 pt-2">
                     @foreach ($months as $month)
                         @php $h = $maxMonthCount > 0 ? max(4, round(($month['count'] / $maxMonthCount) * 100)) : 4; @endphp
                         <div class="flex flex-1 flex-col items-center gap-1">
@@ -100,7 +179,7 @@
                         </div>
                     @endforeach
                 </div>
-                <div class="mt-2 flex gap-2 px-2">
+                <div class="mt-2 flex gap-1.5 px-2">
                     @foreach ($months as $month)
                         <p class="flex-1 text-center text-[10px] font-semibold text-maroon-900/50">{{ $month['label'] }}</p>
                     @endforeach
@@ -110,7 +189,7 @@
 
         {{-- ── Status breakdown ────────────────────────────────────────────── --}}
         <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm">
-            <h3 class="mb-5 text-sm font-semibold text-maroon-950">Reasons Breakdown — Status Distribution</h3>
+            <h3 class="mb-5 text-sm font-semibold text-maroon-950">Status Distribution</h3>
             @if ($totalCount === 0)
                 <p class="py-8 text-center text-sm text-maroon-900/40">No data yet.</p>
             @else

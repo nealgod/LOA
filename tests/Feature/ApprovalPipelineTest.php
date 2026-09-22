@@ -325,16 +325,21 @@ class ApprovalPipelineTest extends TestCase
             ->assertSeeText('Logout')
             ->assertDontSeeText('Request LOA')
             // Filter labels
-            ->assertSeeText('Semester')
-            ->assertSeeText('Program / Department')
+            ->assertSeeText('Year')
+            ->assertSeeText('Department')
+            ->assertSeeText('Status')
+            ->assertSeeText('Apply')
+            // No "future release" text
+            ->assertDontSeeText('future release')
             // Stat card headings
             ->assertSeeText('LOA Count')
             ->assertSeeText('Processing Time')
             ->assertSeeText('Highest Program')
             // Chart section labels
             ->assertSeeText('Volume by Department')
-            ->assertSeeText('Duration Trend')
-            ->assertSeeText('Reasons Breakdown');
+            ->assertSeeText('Monthly Submissions')
+            ->assertSeeText('Status Distribution')
+            ->assertSeeText('Top Programs by Submission Volume');
     }
 
     /**

@@ -13,17 +13,45 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class LoaRequestController extends Controller
 {
-    public function pipeline(): View
+    public function pipeline(Request $request): View
     {
         $user = auth()->user();
+
+        // ── Filters ───────────────────────────────────────────────────────────
+        $filterStatus = $request->string('status')->toString() ?: null;
+        $filterDept   = $request->integer('department_id') ?: null;
+        $filterSearch = trim($request->string('search')->toString()) ?: null;
+
+        $validStatuses = ['submitted', 'approved', 'rejected', 'discontinued', 'draft'];
+        if ($filterStatus && ! in_array($filterStatus, $validStatuses, true)) {
+            $filterStatus = null;
+        }
+
+        // Dept Head is always locked to their own dept
+        $isDh = $user->role->is(\App\Enums\UserRole::DepartmentHead);
+        if ($isDh) {
+            $filterDept = null; // scope handled by scopeForUser
+        }
 
         $loas = LoaRequest::query()
             ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'registrarActor', 'guidanceActor', 'rejectedByActor'])
             ->scopeForUser($user)
+            ->when($filterStatus, fn ($q) => $q->where('status', $filterStatus))
+            ->when($filterDept && ! $isDh, fn ($q) => $q->where('department_id', $filterDept))
+            ->when($filterSearch, fn ($q) => $q->where(function ($q2) use ($filterSearch) {
+                $q2->where('full_name', 'like', "%{$filterSearch}%")
+                   ->orWhere('student_id', 'like', "%{$filterSearch}%")
+                   ->orWhere('control_number', 'like', "%{$filterSearch}%");
+            }))
             ->latest('submitted_at')
             ->get();
 
-        return view('staff.pipeline', compact('user', 'loas'));
+        $departments = \App\Models\Department::query()->orderBy('name')->get(['id', 'code', 'name']);
+
+        return view('staff.pipeline', compact(
+            'user', 'loas', 'departments', 'isDh',
+            'filterStatus', 'filterDept', 'filterSearch',
+        ));
     }
 
     public function show(LoaRequest $loaRequest): View|RedirectResponse
@@ -65,7 +93,7 @@ class LoaRequestController extends Controller
         $user = $request->user();
         $loaRequest->markApprovedBy($user);
 
-        return redirect()->route('staff.pipeline')->with('status', "LOA {$loaRequest->control_number} approved by {$user->role->label()}.");
+        return redirect()->route('staff.pipeline', $request->only(['status', 'department_id', 'search']))->with('status', "LOA {$loaRequest->control_number} approved by {$user->role->label()}.");
     }
 
     public function reject(Request $request, LoaRequest $loaRequest): RedirectResponse
@@ -81,6 +109,6 @@ class LoaRequestController extends Controller
         $user = $request->user();
         $loaRequest->markRejectedBy($user, $request->input('reason'));
 
-        return redirect()->route('staff.pipeline')->with('status', "LOA {$loaRequest->control_number} rejected by {$user->role->label()}.");
+        return redirect()->route('staff.pipeline', $request->only(['status', 'department_id', 'search']))->with('status', "LOA {$loaRequest->control_number} rejected by {$user->role->label()}.");
     }
 }

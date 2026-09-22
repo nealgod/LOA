@@ -4,7 +4,7 @@
 @section('title', 'Approval Pipeline & Records')
 
 @section('content')
-    <div class="mb-8 rounded-2xl border border-maroon-900/10 bg-white p-5 shadow-sm">
+    <div class="mb-6 rounded-2xl border border-maroon-900/10 bg-white p-5 shadow-sm">
         <p class="text-xs font-semibold uppercase tracking-wider text-maroon-600">Sequentially Enforced Order</p>
         <h2 class="mt-1 text-lg font-semibold text-maroon-950">Sequential Approval Pipeline &amp; Authority Clearances</h2>
         <p class="mt-2 text-sm text-maroon-900/70">
@@ -13,9 +13,103 @@
         </p>
     </div>
 
+    {{-- ── Filters ─────────────────────────────────────────────────────────── --}}
+    <form method="GET" action="{{ route('staff.pipeline') }}"
+          class="mb-6 flex flex-wrap items-end gap-3 rounded-2xl border border-maroon-900/10 bg-white px-5 py-4 shadow-sm">
+
+        {{-- Search --}}
+        <div class="flex-1 min-w-[180px]">
+            <label for="filter-search" class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Search</label>
+            <input id="filter-search" type="text" name="search" value="{{ $filterSearch }}"
+                   placeholder="Name, Student ID, or Control No."
+                   class="w-full rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 placeholder-maroon-900/30 focus:outline-none focus:ring-2 focus:ring-maroon-700">
+        </div>
+
+        {{-- Department --}}
+        @if ($isDh)
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Department</label>
+                <p class="rounded-lg border border-maroon-900/15 bg-maroon-50 px-3 py-2 text-sm font-semibold text-maroon-900">
+                    {{ auth()->user()->department?->name ?? 'Your Department' }}
+                </p>
+            </div>
+        @else
+            <div>
+                <label for="filter-dept" class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Department</label>
+                <select id="filter-dept" name="department_id"
+                        class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 focus:outline-none focus:ring-2 focus:ring-maroon-700">
+                    <option value="">All Departments</option>
+                    @foreach ($departments as $dept)
+                        <option value="{{ $dept->id }}" {{ $filterDept == $dept->id ? 'selected' : '' }}>
+                            {{ $dept->code }} — {{ $dept->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+        @endif
+
+        {{-- Status --}}
+        <div>
+            <label for="filter-status" class="block text-xs font-semibold uppercase tracking-wider text-maroon-900/50 mb-1">Status</label>
+            <select id="filter-status" name="status"
+                    class="rounded-lg border border-maroon-900/15 bg-cream-50 px-3 py-2 text-sm text-maroon-950 focus:outline-none focus:ring-2 focus:ring-maroon-700">
+                <option value="">All Statuses</option>
+                <option value="submitted"    {{ $filterStatus === 'submitted'    ? 'selected' : '' }}>Under Review</option>
+                <option value="approved"     {{ $filterStatus === 'approved'     ? 'selected' : '' }}>Approved</option>
+                <option value="rejected"     {{ $filterStatus === 'rejected'     ? 'selected' : '' }}>Rejected</option>
+                <option value="discontinued" {{ $filterStatus === 'discontinued' ? 'selected' : '' }}>Discontinued</option>
+                <option value="draft"        {{ $filterStatus === 'draft'        ? 'selected' : '' }}>Draft</option>
+            </select>
+        </div>
+
+        {{-- Apply / Clear --}}
+        <div class="flex gap-2">
+            <button type="submit"
+                    class="rounded-lg bg-maroon-800 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-maroon-700">
+                Apply
+            </button>
+            @if ($filterSearch || $filterStatus || $filterDept)
+                <a href="{{ route('staff.pipeline') }}"
+                   class="rounded-lg border border-maroon-900/20 bg-white px-4 py-2 text-sm font-semibold text-maroon-700 hover:bg-maroon-50">
+                    Clear
+                </a>
+            @endif
+        </div>
+
+        {{-- Active filter tags + result count --}}
+        @if ($filterSearch || $filterStatus || $filterDept)
+            <div class="flex w-full flex-wrap items-center gap-2 border-t border-maroon-900/8 pt-3">
+                <span class="text-xs text-maroon-900/50">Showing {{ $loas->count() }} result{{ $loas->count() !== 1 ? 's' : '' }}:</span>
+                @if ($filterSearch)
+                    <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">"{{ $filterSearch }}"</span>
+                @endif
+                @if ($filterDept && ! $isDh)
+                    @php $deptLabel = $departments->firstWhere('id', $filterDept)?->code ?? $filterDept; @endphp
+                    <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">Dept: {{ $deptLabel }}</span>
+                @endif
+                @if ($filterStatus)
+                    @php
+                        $statusLabels = [
+                            'submitted' => 'Under Review', 'approved' => 'Approved',
+                            'rejected' => 'Rejected', 'discontinued' => 'Discontinued', 'draft' => 'Draft',
+                        ];
+                    @endphp
+                    <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">
+                        Status: {{ $statusLabels[$filterStatus] ?? ucfirst($filterStatus) }}
+                    </span>
+                @endif
+            </div>
+        @endif
+    </form>
+
     @if ($loas->isEmpty())
         <div class="rounded-2xl border border-dashed border-maroon-900/15 bg-white p-12 text-center">
-            <p class="text-sm text-maroon-900/60">No LOA submissions in your current scope yet.</p>
+            @if ($filterSearch || $filterStatus || $filterDept)
+                <p class="text-sm text-maroon-900/60">No LOA requests match your current filters.</p>
+                <a href="{{ route('staff.pipeline') }}" class="mt-3 inline-block text-xs font-semibold text-maroon-700 underline underline-offset-2 hover:text-maroon-600">Clear filters</a>
+            @else
+                <p class="text-sm text-maroon-900/60">No LOA submissions in your current scope yet.</p>
+            @endif
         </div>
     @else
         <div class="overflow-x-auto rounded-2xl border border-maroon-900/10 bg-white shadow-sm">
@@ -77,6 +171,10 @@
                                     @if ($canApprove)
                                         <form method="POST" action="{{ route('staff.loa.approve', $loa) }}" class="m-0 inline-flex">
                                             @csrf
+                                            {{-- Preserve active filters so redirect lands back on same filtered view --}}
+                                            @if ($filterSearch)  <input type="hidden" name="search"        value="{{ $filterSearch }}"> @endif
+                                            @if ($filterStatus)  <input type="hidden" name="status"        value="{{ $filterStatus }}"> @endif
+                                            @if ($filterDept)    <input type="hidden" name="department_id" value="{{ $filterDept }}">   @endif
                                             <button type="submit"
                                                     class="inline-flex items-center rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-emerald-500">
                                                 Approve LOA
@@ -89,6 +187,9 @@
                                                 data-reject-trigger
                                                 data-control="{{ $loa->control_number }}"
                                                 data-action="{{ route('staff.loa.reject', $loa) }}"
+                                                data-filter-search="{{ $filterSearch }}"
+                                                data-filter-status="{{ $filterStatus }}"
+                                                data-filter-dept="{{ $filterDept }}"
                                                 class="inline-flex items-center rounded-md border border-red-600 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 shadow-sm hover:bg-red-50">
                                             Reject LOA
                                         </button>
@@ -157,10 +258,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const reasonField  = document.getElementById('reject-reason');
     const cancelBtn    = document.getElementById('reject-cancel');
 
-    const open = (control, action) => {
+    const open = (control, action, filterSearch, filterStatus, filterDept) => {
         controlLabel.textContent = control;
         form.action = action;
         reasonField.value = '';
+
+        // Inject filter params as hidden inputs so the redirect preserves them
+        form.querySelectorAll('.filter-param').forEach(el => el.remove());
+        const addHidden = (name, value) => {
+            if (! value) return;
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            input.className = 'filter-param';
+            form.appendChild(input);
+        };
+        addHidden('search', filterSearch);
+        addHidden('status', filterStatus);
+        addHidden('department_id', filterDept);
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         reasonField.focus();
@@ -173,7 +290,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     document.querySelectorAll('[data-reject-trigger]').forEach(btn => {
-        btn.addEventListener('click', () => open(btn.dataset.control, btn.dataset.action));
+        btn.addEventListener('click', () => open(
+            btn.dataset.control,
+            btn.dataset.action,
+            btn.dataset.filterSearch || '',
+            btn.dataset.filterStatus || '',
+            btn.dataset.filterDept   || '',
+        ));
     });
 
     cancelBtn.addEventListener('click', close);
