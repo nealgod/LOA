@@ -282,6 +282,12 @@
             @endcanany
 
             {{-- Navigation --}}
+            @if ($loa->status === 'approved')
+                <a href="{{ route('staff.loa.pdf', $loa) }}"
+                   class="block w-full rounded-xl bg-maroon-800 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-maroon-700">
+                    ↓ Download Approved PDF
+                </a>
+            @endif
             <a href="{{ $backUrl }}"
                class="block w-full rounded-xl border border-maroon-900/15 bg-white px-4 py-2.5 text-center text-sm font-semibold text-maroon-700 shadow-sm hover:bg-maroon-50">
                 ← Back

@@ -44,9 +44,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/staff/profile',        [ProfileController::class, 'updateName'])->name('staff.profile.name');
     Route::patch('/staff/profile/password', [ProfileController::class, 'updatePassword'])->name('staff.profile.password');
 
-    // LOA detail / approve / reject (dept-scoped)
+    // LOA detail / approve / reject / PDF download (dept-scoped)
     Route::middleware('dept.scope')->group(function () {
         Route::get('/staff/loa/{loaRequest}',                        [LoaRequestController::class, 'show'])->name('staff.loa.show');
+        Route::get('/staff/loa/{loaRequest}/pdf',                    [LoaRequestController::class, 'pdf'])->name('staff.loa.pdf');
         Route::get('/staff/loa/{loaRequest}/files/{attachment}',     [LoaRequestController::class, 'attachment'])->name('staff.loa.attachment');
         Route::post('/staff/loa/{loaRequest}/approve',               [LoaRequestController::class, 'approve'])->name('staff.loa.approve');
         Route::post('/staff/loa/{loaRequest}/reject',                [LoaRequestController::class, 'reject'])->name('staff.loa.reject');

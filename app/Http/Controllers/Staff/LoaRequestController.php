@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\LoaAttachment;
 use App\Models\LoaRequest;
+use App\Services\LoaPdfGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -52,6 +54,24 @@ class LoaRequestController extends Controller
             'user', 'loas', 'departments', 'isDh',
             'filterStatus', 'filterDept', 'filterSearch',
         ));
+    }
+
+    public function pdf(LoaRequest $loaRequest): HttpResponse
+    {
+        abort_unless(auth()->user()->canViewLoaRequest($loaRequest), 403);
+
+        // Only allow download if fully approved
+        abort_unless($loaRequest->status === 'approved', 403, 'PDF is only available after full approval.');
+
+        $generator = new LoaPdfGenerator();
+        $pdfContent = $generator->generate($loaRequest);
+
+        $filename = 'LOA-' . $loaRequest->control_number . '.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type'        => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
     }
 
     public function show(LoaRequest $loaRequest): View|RedirectResponse

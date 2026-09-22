@@ -420,6 +420,49 @@ class ApprovalPipelineTest extends TestCase
         return $loa->fresh();
     }
 
+    public function test_pdf_download_forbidden_when_not_approved(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+
+        $this->actingAs($saso)
+            ->get(route('staff.loa.pdf', $loa))
+            ->assertStatus(403);
+    }
+
+    public function test_pdf_download_forbidden_for_cross_department_dh(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $loa->forceFill(['status' => 'approved'])->save();
+
+        $dteHead = User::factory()->create([
+            'role' => UserRole::DepartmentHead,
+            'department_id' => $this->dte->id,
+        ]);
+
+        $this->actingAs($dteHead)
+            ->get(route('staff.loa.pdf', $loa))
+            ->assertStatus(403);
+    }
+
+    public function test_pdf_download_succeeds_for_approved_loa(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $loa->forceFill(['status' => 'approved'])->save();
+
+        $dcsHead = User::factory()->create([
+            'role' => UserRole::DepartmentHead,
+            'department_id' => $this->dcs->id,
+        ]);
+
+        $response = $this->actingAs($dcsHead)
+            ->get(route('staff.loa.pdf', $loa));
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringContainsString('LOA-' . $loa->control_number . '.pdf', $response->headers->get('Content-Disposition') ?? '');
+    }
+
     private function seedLoas(int $dcsCount, int $dteCount): void
     {
         foreach (range(1, $dcsCount) as $i) {
@@ -430,3 +473,4 @@ class ApprovalPipelineTest extends TestCase
         }
     }
 }
+
