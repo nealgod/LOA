@@ -67,7 +67,6 @@
                     </form>
                 @else
                     <a href="{{ route('login') }}" class="rounded-md px-3 py-2 text-sm hover:bg-white/10">Staff login</a>
-                    <a href="{{ route('register') }}" class="rounded-md border border-cream-50/30 px-3 py-2 text-sm hover:bg-white/10">Register</a>
                 @endauth
             </nav>
         </div>
@@ -84,7 +83,6 @@
                 </form>
             @else
                 <a href="{{ route('login') }}" class="rounded-md px-3 py-2 text-sm">Staff login</a>
-                <a href="{{ route('register') }}" class="rounded-md px-3 py-2 text-sm">Register</a>
             @endauth
         </nav>
     </header>

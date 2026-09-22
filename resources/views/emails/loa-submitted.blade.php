@@ -82,8 +82,19 @@
                                 <tr>
                                     <td style="padding:5px 0;font-size:13px;color:#8a1c30;vertical-align:top;">Attachments</td>
                                     <td style="padding:5px 0;font-size:13px;color:#2b070d;">
-                                        {{ $loa->attachments->count() }} file(s) uploaded
+                                        {{ $loa->attachments->count() }} file(s) uploaded:<br>
+                                        @foreach ($loa->attachments as $file)
+                                            <span style="display:block;margin-top:3px;">
+                                                {{ $loop->iteration }}. {{ $file->original_name }}
+                                                <span style="color:#8a1c30;">({{ number_format($file->size / 1024, 1) }} KB)</span>
+                                            </span>
+                                        @endforeach
                                     </td>
+                                </tr>
+                                @else
+                                <tr>
+                                    <td style="padding:5px 0;font-size:13px;color:#8a1c30;vertical-align:top;">Attachments</td>
+                                    <td style="padding:5px 0;font-size:13px;color:#8a1c30;font-style:italic;">None submitted</td>
                                 </tr>
                                 @endif
                             </table>

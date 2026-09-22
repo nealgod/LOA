@@ -18,9 +18,21 @@ class LoginController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'email'    => ['required', 'email'],
             'password' => ['required', 'string'],
         ]);
+
+        // Check if the account exists but hasn't been activated via invitation yet.
+        $pending = \App\Models\User::query()
+            ->where('email', strtolower($credentials['email']))
+            ->whereNull('invitation_accepted_at')
+            ->exists();
+
+        if ($pending) {
+            return back()
+                ->withInput($request->only('email'))
+                ->withErrors(['email' => 'Your account is not activated yet. Check your email for the setup link.']);
+        }
 
         if (! Auth::attempt($credentials, $request->boolean('remember'))) {
             return back()

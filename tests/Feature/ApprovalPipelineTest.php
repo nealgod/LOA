@@ -69,6 +69,8 @@ class ApprovalPipelineTest extends TestCase
             ->assertSeeText('Dept Head Status')
             ->assertSeeText('SASO Status')
             ->assertSeeText('Campus Director Status')
+            ->assertSeeText('Registrar Status')
+            ->assertSeeText('Guidance Status')
             ->assertSeeText('Action Options')
             // Stage badges
             ->assertSeeText('Approved')
@@ -179,15 +181,15 @@ class ApprovalPipelineTest extends TestCase
     }
 
     /**
-     * AC-6: CD final approve → overall status 'approved'.
+     * AC-6: CD approve → advances to Registrar stage (not fully approved yet).
      */
-    public function test_cd_final_approve_sets_overall_approved(): void
+    public function test_cd_approve_advances_to_registrar(): void
     {
         $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
 
         $dhDcs = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
-        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
-        $cd = User::factory()->create(['role' => UserRole::CampusDirector]);
+        $saso  = User::factory()->create(['role' => UserRole::SasoOfficer]);
+        $cd    = User::factory()->create(['role' => UserRole::CampusDirector]);
 
         $loa->markApprovedBy($dhDcs);
         $loa->markApprovedBy($saso);
@@ -199,40 +201,87 @@ class ApprovalPipelineTest extends TestCase
             ->assertSessionHas('status');
 
         $fresh = $loa->fresh();
-        $this->assertTrue($fresh->dept_head_status->is(ApprovalStageStatus::Approved));
-        $this->assertTrue($fresh->saso_status->is(ApprovalStageStatus::Approved));
         $this->assertTrue($fresh->campus_director_status->is(ApprovalStageStatus::Approved));
-        $this->assertSame('approved', $fresh->status);
         $this->assertSame($cd->id, $fresh->campus_director_by);
+        // Registrar is now pending — not fully approved yet
+        $this->assertTrue($fresh->registrar_status->is(ApprovalStageStatus::Pending));
+        $this->assertSame('submitted', $fresh->status);
     }
 
     /**
-     * AC-8: Registrar, Guidance, Director's Office see only View button (no Approve/Reject).
+     * AC-6b: All 5 stages approved → overall status becomes 'approved'.
      */
-    public function test_registrar_guidance_directorsoffice_see_only_view_buttons(): void
+    public function test_all_five_stages_approve_sets_overall_approved(): void
     {
         $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
-        // Force all 1-act: DH approved SASO pending; make it:
+
+        $dh       = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
+        $saso     = User::factory()->create(['role' => UserRole::SasoOfficer]);
+        $cd       = User::factory()->create(['role' => UserRole::CampusDirector]);
+        $reg      = User::factory()->create(['role' => UserRole::Registrar]);
+        $guidance = User::factory()->create(['role' => UserRole::Guidance]);
+
+        $loa->markApprovedBy($dh);
+        $loa->markApprovedBy($saso);
+        $loa->markApprovedBy($cd);
+        $this->assertTrue($loa->fresh()->registrar_status->is(ApprovalStageStatus::Pending));
+
+        $loa->markApprovedBy($reg);
+        $this->assertTrue($loa->fresh()->guidance_status->is(ApprovalStageStatus::Pending));
+        $this->assertSame('submitted', $loa->fresh()->status);
+
+        $this->actingAs($guidance)
+            ->post(route('staff.loa.approve', $loa))
+            ->assertRedirect(route('staff.pipeline'));
+
+        $fresh = $loa->fresh();
+        $this->assertTrue($fresh->guidance_status->is(ApprovalStageStatus::Approved));
+        $this->assertSame('approved', $fresh->status);
+    }
+
+    /**
+     * AC-8: Registrar can only act at stage 4 — sees no buttons when earlier stages pending.
+     * Guidance can only act at stage 5 — sees no buttons when earlier stages pending.
+     */
+    public function test_registrar_and_guidance_cannot_act_before_their_stage(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        // Only DH approved — SASO pending. Registrar/Guidance should not see action buttons.
         $dhDcs = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
         $loa->markApprovedBy($dhDcs);
 
-        $roles = [
-            UserRole::Registrar,
-            UserRole::Guidance,
-            UserRole::DirectorsOffice,
-        ];
-
-        foreach ($roles as $role) {
+        foreach ([UserRole::Registrar, UserRole::Guidance] as $role) {
             $user = User::factory()->create(['role' => $role]);
-            $response = $this->actingAs($user)->get(route('staff.pipeline'));
-            $response->assertOk();
-            // View is always present
-            $response->assertSeeText('View');
-            // Approve/Reject action buttons not rendered (use full button text
-            // to avoid false positive against "Approval" header / "Rejection" intro)
-            $response->assertDontSeeText('Approve LOA');
-            $response->assertDontSeeText('Reject LOA');
+            $this->actingAs($user)
+                ->get(route('staff.pipeline'))
+                ->assertOk()
+                ->assertSeeText('View')
+                ->assertDontSeeText('Approve LOA')
+                ->assertDontSeeText('Reject LOA');
         }
+    }
+
+    /**
+     * AC-8b: Registrar sees Approve/Reject when it is their turn (stage 4).
+     */
+    public function test_registrar_sees_action_buttons_at_stage_4(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+
+        $dh   = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+        $cd   = User::factory()->create(['role' => UserRole::CampusDirector]);
+
+        $loa->markApprovedBy($dh);
+        $loa->markApprovedBy($saso);
+        $loa->markApprovedBy($cd);
+        $this->assertTrue($loa->fresh()->registrar_status->is(ApprovalStageStatus::Pending));
+
+        $registrar = User::factory()->create(['role' => UserRole::Registrar]);
+        $this->actingAs($registrar)
+            ->get(route('staff.pipeline'))
+            ->assertOk()
+            ->assertSeeText('Approve LOA');
     }
 
     /**

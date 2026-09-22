@@ -12,7 +12,7 @@ class StaffUsersSeeder extends Seeder
 {
     public function run(): void
     {
-        $password = Hash::make('password');
+        $password = Hash::make('12345678');
 
         $dcs = Department::query()->where('code', 'DCS')->first();
         $dte = Department::query()->where('code', 'DTE')->first();
@@ -60,12 +60,6 @@ class StaffUsersSeeder extends Seeder
                 'role' => UserRole::Guidance,
                 'department_id' => null,
             ],
-            [
-                'name' => "Director's Office Staff",
-                'email' => 'directors.office@evsu.edu.ph',
-                'role' => UserRole::DirectorsOffice,
-                'department_id' => null,
-            ],
         ];
 
         foreach ($users as $record) {
@@ -74,11 +68,14 @@ class StaffUsersSeeder extends Seeder
             }
 
             User::query()->create([
-                'name' => $record['name'],
-                'email' => $record['email'],
-                'password' => $password,
-                'role' => $record['role'],
-                'department_id' => $record['department_id'],
+                'name'                    => $record['name'],
+                'email'                   => $record['email'],
+                'password'                => $password,
+                'role'                    => $record['role'],
+                'department_id'           => $record['department_id'],
+                // Seeded accounts are pre-activated — no invitation flow needed.
+                'invitation_accepted_at'  => now(),
+                'email_verified_at'       => now(),
             ]);
         }
     }

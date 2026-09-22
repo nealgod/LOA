@@ -12,7 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'dept.scope' => \App\Http\Middleware\EnsureDepartmentScope::class,
+            'dept.scope'  => \App\Http\Middleware\EnsureDepartmentScope::class,
+            'admin.only'  => \App\Http\Middleware\EnsureAdminRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

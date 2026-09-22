@@ -5,7 +5,9 @@
 @section('content')
 <x-page-shell eyebrow="Staff" title="Staff login">
     <x-slot:lead>
-        For Department Head, SASO, Campus Director, Registrar, and Guidance. Students use Request LOA instead.
+        For Department Head, SASO, Campus Director, Registrar, and Guidance.
+        Staff accounts are created by the System Administrator.
+        Students use <a href="{{ route('student.identity') }}" class="font-semibold underline">Request LOA</a> instead.
     </x-slot:lead>
 
     <form method="POST" action="{{ route('login.store') }}" class="space-y-4 rounded-2xl border border-maroon-900/10 bg-white p-6 sm:p-8">
@@ -22,8 +24,9 @@
             <input type="checkbox" name="remember" class="rounded border-maroon-900/30">
             Remember me
         </label>
-        <button type="submit" class="w-full rounded-xl bg-maroon-800 px-4 py-3.5 text-base font-semibold text-cream-50 hover:bg-maroon-700">Log in</button>
-        <p class="text-center text-sm text-maroon-800/80">No account yet? <a href="{{ route('register') }}" class="font-semibold text-maroon-700">Register</a></p>
+        <button type="submit" class="w-full rounded-xl bg-maroon-800 px-4 py-3.5 text-base font-semibold text-cream-50 hover:bg-maroon-700">
+            Log in
+        </button>
     </form>
 </x-page-shell>
 @endsection

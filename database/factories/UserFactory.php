@@ -26,12 +26,15 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'role' => UserRole::DepartmentHead,
-            'remember_token' => Str::random(10),
+            'name'                   => fake()->name(),
+            'email'                  => fake()->unique()->safeEmail(),
+            'email_verified_at'      => now(),
+            'password'               => static::$password ??= Hash::make('password'),
+            'role'                   => UserRole::DepartmentHead,
+            'remember_token'         => Str::random(10),
+            // Factory-created users are pre-activated (no pending invite).
+            // Tests that need an unactivated user should explicitly set this to null.
+            'invitation_accepted_at' => now(),
         ];
     }
 

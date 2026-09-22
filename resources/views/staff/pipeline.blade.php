@@ -8,7 +8,7 @@
         <p class="text-xs font-semibold uppercase tracking-wider text-maroon-600">Sequentially Enforced Order</p>
         <h2 class="mt-1 text-lg font-semibold text-maroon-950">Sequential Approval Pipeline &amp; Authority Clearances</h2>
         <p class="mt-2 text-sm text-maroon-900/70">
-            Stage actions are locked in order: <span class="font-semibold">Department Head → SASO Officer → Campus Director</span>.
+            Stage actions are locked in order: <span class="font-semibold">Department Head → SASO Officer → Campus Director → Registrar → Guidance Office</span>.
             Each stage must be approved before the next office can act. A rejection at any stage terminates the pipeline.
         </p>
     </div>
@@ -28,6 +28,8 @@
                         <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-maroon-900/70 sm:px-4">Dept Head Status</th>
                         <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-maroon-900/70 sm:px-4">SASO Status</th>
                         <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-maroon-900/70 sm:px-4">Campus Director Status</th>
+                        <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-maroon-900/70 sm:px-4">Registrar Status</th>
+                        <th scope="col" class="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wider text-maroon-900/70 sm:px-4">Guidance Status</th>
                         <th scope="col" class="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wider text-maroon-900/70 sm:px-4">Action Options</th>
                     </tr>
                 </thead>
@@ -63,6 +65,8 @@
                             <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->dept_head_status) !!}</td>
                             <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->saso_status) !!}</td>
                             <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->campus_director_status) !!}</td>
+                            <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->registrar_status) !!}</td>
+                            <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->guidance_status) !!}</td>
                             <td class="whitespace-nowrap px-3 py-3 text-right text-sm sm:px-4">
                                 <div class="inline-flex flex-wrap items-center justify-end gap-2">
                                     <a href="{{ route('staff.loa.show', $loa) }}"

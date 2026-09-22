@@ -156,25 +156,6 @@ class RoleDashboardScopeTest extends TestCase
     }
 
     /**
-     * AC-1: Director's Office dashboard uses staff shell (no READ-ONLY badge — all roles render sidebar identically).
-     */
-    public function test_directors_office_dashboard_uses_staff_shell(): void
-    {
-        $user = User::factory()->create(['role' => UserRole::DirectorsOffice]);
-        $this->seedLoas(1, 0);
-
-        $this->actingAs($user)
-            ->get(route('staff.dashboard'))
-            ->assertOk()
-            ->assertSeeText("Director's Office")
-            ->assertSeeText('Dashboard')
-            ->assertSeeText('Approval Pipeline')
-            ->assertSeeText('Reports & Analytics')
-            ->assertSeeText('User Profile')
-            ->assertSeeText('Logout');
-    }
-
-    /**
      * AC-1: Administrator dashboard uses staff shell and shows admin role label.
      */
     public function test_admin_dashboard_uses_staff_shell(): void

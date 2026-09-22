@@ -17,7 +17,12 @@ Leave period     : {{ $loa->start_date?->format('M j, Y') }} to {{ $loa->return_
 Date submitted   : {{ $loa->submitted_at?->format('M j, Y g:i A') }}
 Parent / Guardian: {{ $loa->parent_full_name }} ({{ $loa->parent_relationship }}) — {{ $loa->parent_phone }}
 @if ($loa->attachments->isNotEmpty())
-Attachments      : {{ $loa->attachments->count() }} file(s) uploaded
+Attachments      : {{ $loa->attachments->count() }} file(s):
+@foreach ($loa->attachments as $file)
+  {{ $loop->iteration }}. {{ $file->original_name }} ({{ number_format($file->size / 1024, 1) }} KB)
+@endforeach
+@else
+Attachments      : None submitted
 @endif
 
 Reason:

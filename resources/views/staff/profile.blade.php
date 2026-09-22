@@ -38,7 +38,6 @@
                         \App\Enums\UserRole::CampusDirector   => 'bg-emerald-100 text-emerald-800 border-emerald-300',
                         \App\Enums\UserRole::Registrar        => 'bg-teal-100 text-teal-800 border-teal-300',
                         \App\Enums\UserRole::Guidance         => 'bg-sky-100 text-sky-800 border-sky-300',
-                        \App\Enums\UserRole::DirectorsOffice  => 'bg-maroon-100 text-maroon-800 border-maroon-300',
                         default                               => 'bg-gray-100 text-gray-700 border-gray-300',
                     };
                 @endphp

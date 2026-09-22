@@ -18,7 +18,7 @@ class LoaRequestController extends Controller
         $user = auth()->user();
 
         $loas = LoaRequest::query()
-            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'rejectedByActor'])
+            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'registrarActor', 'guidanceActor', 'rejectedByActor'])
             ->scopeForUser($user)
             ->latest('submitted_at')
             ->get();
@@ -30,7 +30,17 @@ class LoaRequestController extends Controller
     {
         abort_unless(auth()->user()->canViewLoaRequest($loaRequest), 403);
 
-        $loaRequest->load(['department', 'program', 'attachments']);
+        $loaRequest->load([
+            'department',
+            'program',
+            'attachments',
+            'deptHeadActor',
+            'sasoActor',
+            'campusDirectorActor',
+            'registrarActor',
+            'guidanceActor',
+            'rejectedByActor',
+        ]);
 
         return view('staff.loa-show', [
             'loa' => $loaRequest,
@@ -39,9 +49,10 @@ class LoaRequestController extends Controller
 
     public function attachment(LoaRequest $loaRequest, LoaAttachment $attachment): StreamedResponse
     {
+        // All authenticated staff can view attachments — only DH is dept-scoped.
+        // The dept.scope middleware already blocked cross-dept DH before reaching here.
         abort_unless(auth()->user()->canViewLoaRequest($loaRequest), 403);
         abort_unless($attachment->loa_request_id === $loaRequest->id, 404);
-
         abort_unless(Storage::disk('local')->exists($attachment->path), 404);
 
         return Storage::disk('local')->download($attachment->path, $attachment->original_name);

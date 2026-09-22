@@ -20,9 +20,6 @@
                     <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl border border-maroon-800/20 bg-white px-6 py-3.5 text-center text-base font-semibold text-maroon-900 hover:bg-cream-100">
                         Staff login
                     </a>
-                    <a href="{{ route('register') }}" class="inline-flex items-center justify-center rounded-xl px-6 py-3.5 text-center text-base font-medium text-maroon-800 hover:bg-cream-100">
-                        Staff register
-                    </a>
                 @else
                     <a href="{{ route('staff.dashboard') }}" class="inline-flex items-center justify-center rounded-xl bg-maroon-800 px-6 py-3.5 text-center text-base font-semibold text-cream-50 hover:bg-maroon-700">
                         Go to Dashboard
@@ -59,7 +56,7 @@
                 </li>
                 <li class="flex gap-4">
                     <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-maroon-800 text-sm font-bold text-cream-50">4</span>
-                    <span>Department Head, SASO, then Campus Director review it. No e-signature drawing.</span>
+                    <span>Department Head, SASO, Campus Director, Registrar, then Guidance Office review it. No e-signature drawing.</span>
                 </li>
             </ol>
         </div>
@@ -71,7 +68,7 @@
         <h2 class="text-3xl font-semibold text-maroon-900 lg:text-4xl">Built for EVSU Ormoc’s LOA process</h2>
         <p class="mt-4 text-base leading-relaxed text-maroon-800/80 lg:text-lg">
             The current paper route is slow when a student cannot come to campus. LeaveFlow keeps the same offices
-            in sequence, stores supporting files, and logs every approval with name, time, and IP.
+            in sequence, stores supporting files, and logs every approval with name and date.
         </p>
     </div>
 
@@ -79,10 +76,10 @@
         @foreach ([
             ['Public request', 'No student portal. Identity is confirmed through your official EVSU email link.'],
             ['Control Number', 'Each application gets an ID such as EVSU-OC-LOA-2026-0001 for tracking and the PDF.'],
-            ['Multi-level review', 'Department Head (parent call) → SASO Officer → Campus Director final approval.'],
+            ['Multi-level review', 'Department Head (parent call) → SASO Officer → Campus Director → Registrar → Guidance Office sequential approval.'],
             ['Registrar & Guidance', 'After approval, classes are marked Withdrawn and Guidance records exit counseling.'],
             ['Return follow-up', 'Seven days before your return date, you confirm if you are coming back.'],
-            ['Staff workspace', 'Employees register or log in to review queues for their office only.'],
+            ['Staff workspace', 'Employees are invited by the System Administrator to access their office queue.'],
         ] as $card)
             <article class="rounded-2xl border border-maroon-900/10 bg-white p-6 lg:p-7">
                 <h3 class="text-lg font-semibold text-maroon-900">{{ $card[0] }}</h3>

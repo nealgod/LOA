@@ -81,6 +81,14 @@
                     <span>User Profile</span>
                 </a>
 
+                @if ($user?->role->is(\App\Enums\UserRole::Administrator))
+                    <a href="{{ route('admin.users.index') }}"
+                       class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition {{ str_starts_with($activeRoute, 'admin.users') ? 'bg-maroon-800/80 text-cream-50' : 'text-cream-100/85 hover:bg-white/10 hover:text-cream-50' }}">
+                        <span aria-hidden="true" class="text-base leading-none">⚙</span>
+                        <span>User Management</span>
+                    </a>
+                @endif
+
                 <div class="my-2 h-px w-full bg-cream-200/10"></div>
 
                 <form method="POST" action="{{ route('logout') }}">
@@ -120,6 +128,9 @@
             <a href="{{ route('staff.pipeline') }}" class="rounded-md px-3 py-2 hover:bg-white/10">⇌ Approval Pipeline</a>
             <a href="{{ route('staff.reports') }}" class="rounded-md px-3 py-2 hover:bg-white/10">📊 Reports &amp; Analytics</a>
             <a href="{{ route('staff.profile') }}" class="rounded-md px-3 py-2 hover:bg-white/10">👤 User Profile</a>
+            @if ($user?->role->is(\App\Enums\UserRole::Administrator))
+                <a href="{{ route('admin.users.index') }}" class="rounded-md px-3 py-2 hover:bg-white/10">⚙ User Management</a>
+            @endif
             <div class="my-1 h-px w-full bg-cream-200/10"></div>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf

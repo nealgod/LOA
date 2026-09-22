@@ -10,7 +10,6 @@ enum UserRole: string
     case CampusDirector = 'campus_director';
     case Registrar = 'registrar';
     case Guidance = 'guidance';
-    case DirectorsOffice = 'directors_office';
 
     public function label(): string
     {
@@ -21,7 +20,6 @@ enum UserRole: string
             self::CampusDirector => 'Campus Director',
             self::Registrar => 'Registrar',
             self::Guidance => 'Guidance Office',
-            self::DirectorsOffice => "Director's Office",
         };
     }
 
@@ -33,17 +31,5 @@ enum UserRole: string
     public function is(self $other): bool
     {
         return $this === $other;
-    }
-
-    /** Student is separate. These five are the staff offices on register/login. */
-    public static function staffRoles(): array
-    {
-        return [
-            self::DepartmentHead,
-            self::SasoOfficer,
-            self::CampusDirector,
-            self::Registrar,
-            self::Guidance,
-        ];
     }
 }
