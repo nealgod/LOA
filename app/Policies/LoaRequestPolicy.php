@@ -10,7 +10,10 @@ class LoaRequestPolicy
 {
     public function before(User $user, string $ability): ?bool
     {
-        if ($user->role->is(UserRole::Administrator)) {
+        // Administrator gets full bypass for all abilities EXCEPT approve/reject —
+        // they are not part of the approval workflow and should not act on LOAs.
+        if ($user->role->is(UserRole::Administrator)
+            && ! in_array($ability, ['approve', 'reject'], true)) {
             return true;
         }
 

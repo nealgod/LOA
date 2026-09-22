@@ -1,78 +1,154 @@
 @extends('layouts.staff')
 
 @section('eyebrow', 'User Management')
-@section('title', 'Edit User — ' . $invitee->name)
+@section('title', 'Edit User')
 
 @section('content')
-<div class="mx-auto max-w-xl">
-    <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm sm:p-8">
+@php
+    $parts    = explode(' ', trim($invitee->name));
+    $initials = strtoupper(($parts[0][0] ?? 'U') . (end($parts)[0] ?? ''));
+    $roleColor = match ($invitee->role) {
+        \App\Enums\UserRole::Administrator  => 'bg-purple-100 text-purple-800 border-purple-300',
+        \App\Enums\UserRole::DepartmentHead => 'bg-blue-100 text-blue-800 border-blue-300',
+        \App\Enums\UserRole::SasoOfficer    => 'bg-amber-100 text-amber-800 border-amber-300',
+        \App\Enums\UserRole::CampusDirector => 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        \App\Enums\UserRole::Registrar      => 'bg-teal-100 text-teal-800 border-teal-300',
+        \App\Enums\UserRole::Guidance       => 'bg-sky-100 text-sky-800 border-sky-300',
+        default                             => 'bg-gray-100 text-gray-700 border-gray-300',
+    };
+@endphp
 
-        <div class="mb-6 flex items-center gap-3">
-            @php
-                $parts    = explode(' ', trim($invitee->name));
-                $initials = strtoupper(($parts[0][0] ?? 'U') . (end($parts)[0] ?? ''));
-            @endphp
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-maroon-700 text-sm font-bold uppercase text-cream-50">
-                {{ $initials }}
+<div class="grid grid-cols-1 gap-5 lg:grid-cols-3">
+
+    {{-- ── Left: user identity card ────────────────────────────────────────── --}}
+    <div>
+        <div class="overflow-hidden rounded-2xl border border-maroon-900/10 bg-white shadow-sm">
+            <div class="relative h-20 bg-gradient-to-r from-maroon-900 via-maroon-800 to-maroon-700">
+                <div class="absolute -bottom-7 left-5">
+                    <div class="flex h-14 w-14 items-center justify-center rounded-full border-4 border-white bg-maroon-600 text-lg font-bold uppercase text-cream-50 shadow-md">
+                        {{ $initials }}
+                    </div>
+                </div>
             </div>
-            <div>
-                <p class="font-semibold text-maroon-950">{{ $invitee->name }}</p>
-                <p class="text-sm text-maroon-900/60">{{ $invitee->email }}</p>
-            </div>
-            <div class="ml-auto">
-                @if ($invitee->isActivated())
-                    <span class="rounded-full border border-emerald-600 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Active</span>
-                @else
-                    <span class="rounded-full border border-amber-500 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Pending invite</span>
-                @endif
+            <div class="px-5 pb-5 pt-10">
+                <div class="flex items-start justify-between gap-2">
+                    <div class="min-w-0">
+                        <p class="truncate text-base font-bold text-maroon-950">{{ $invitee->name }}</p>
+                        <p class="truncate text-xs text-maroon-900/55">{{ $invitee->email }}</p>
+                    </div>
+                    <span class="shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold {{ $roleColor }}">
+                        {{ $invitee->role->label() }}
+                    </span>
+                </div>
+                <dl class="mt-4 space-y-2 border-t border-maroon-900/8 pt-4">
+                    <div class="flex items-center justify-between">
+                        <dt class="text-xs text-maroon-900/50">Status</dt>
+                        <dd>
+                            @if ($invitee->isActivated())
+                                <span class="rounded-full border border-emerald-600 bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Active</span>
+                            @else
+                                <span class="rounded-full border border-amber-500 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Pending invite</span>
+                            @endif
+                        </dd>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <dt class="text-xs text-maroon-900/50">Department</dt>
+                        <dd class="text-xs font-medium text-maroon-950">{{ $invitee->department?->name ?? '—' }}</dd>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <dt class="text-xs text-maroon-900/50">Member since</dt>
+                        <dd class="text-xs font-medium text-maroon-950">{{ $invitee->created_at?->format('M j, Y') ?? '—' }}</dd>
+                    </div>
+                </dl>
             </div>
         </div>
+    </div>
 
-        <form method="POST" action="{{ route('admin.users.update', $invitee) }}" class="space-y-5">
-            @csrf
-            @method('PATCH')
+    {{-- ── Right: edit form ────────────────────────────────────────────────── --}}
+    <div class="space-y-5 lg:col-span-2">
 
-            <div>
-                <label for="name" class="block text-sm font-medium text-maroon-900">Full name</label>
-                <input id="name" name="name" value="{{ old('name', $invitee->name) }}" required
-                       class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none ring-maroon-700 focus:ring-2">
-                @error('name') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
+        @if (session('status'))
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                {{ session('status') }}
             </div>
+        @endif
 
-            <div>
-                <label for="role" class="block text-sm font-medium text-maroon-900">Role</label>
-                <select id="role" name="role" required data-role-select
-                        class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none ring-maroon-700 focus:ring-2">
-                    @foreach ($roles as $role)
-                        <option value="{{ $role->value }}" @selected(old('role', $invitee->role->value) === $role->value)>{{ $role->label() }}</option>
-                    @endforeach
-                </select>
-                @error('role') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
+        @if ($errors->has('role'))
+            <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {{ $errors->first('role') }}
             </div>
+        @endif
 
-            <div @class(['hidden' => ! $invitee->role->needsDepartment()]) data-department-wrap>
-                <label for="department_id" class="block text-sm font-medium text-maroon-900">Department</label>
-                <select id="department_id" name="department_id"
-                        class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none ring-maroon-700 focus:ring-2">
-                    <option value="">Select department</option>
-                    @foreach ($departments as $dept)
-                        <option value="{{ $dept->id }}" @selected(old('department_id', $invitee->department_id) == $dept->id)>{{ $dept->name }}</option>
-                    @endforeach
-                </select>
-                @error('department_id') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
+        <div class="rounded-2xl border border-maroon-900/10 bg-white shadow-sm">
+            <div class="border-b border-maroon-900/8 px-5 py-3.5">
+                <p class="text-sm font-semibold text-maroon-950">Account Details</p>
+                <p class="mt-0.5 text-xs text-maroon-900/50">Email address cannot be changed after account creation.</p>
             </div>
+            <div class="px-5 py-5">
+                <form method="POST" action="{{ route('admin.users.update', $invitee) }}" class="space-y-4">
+                    @csrf
+                    @method('PATCH')
 
-            <div class="flex gap-3 pt-2">
-                <button type="submit"
-                        class="rounded-xl bg-maroon-800 px-5 py-2.5 text-sm font-semibold text-cream-50 hover:bg-maroon-700">
-                    Save Changes
-                </button>
-                <a href="{{ route('admin.users.index') }}"
-                   class="rounded-xl border border-maroon-900/20 bg-white px-5 py-2.5 text-sm font-semibold text-maroon-700 hover:bg-maroon-50">
-                    Cancel
-                </a>
+                    {{-- Name + Role side by side on larger screens --}}
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="name" class="block text-xs font-medium text-maroon-900 mb-1">Full name</label>
+                            <input id="name" name="name" type="text"
+                                   value="{{ old('name', $invitee->name) }}" required
+                                   class="w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-2.5 text-sm text-maroon-950 outline-none focus:ring-2 focus:ring-maroon-700 @error('name') border-red-400 bg-red-50 @enderror">
+                            @error('name')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div>
+                            <label for="email" class="block text-xs font-medium text-maroon-900 mb-1">Email address</label>
+                            <input type="text" value="{{ $invitee->email }}" disabled
+                                   class="w-full rounded-xl border border-maroon-900/10 bg-maroon-50 px-3 py-2.5 text-sm text-maroon-900/50 cursor-not-allowed">
+                        </div>
+                    </div>
+
+                    {{-- Role + Department side by side --}}
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                            <label for="role" class="block text-xs font-medium text-maroon-900 mb-1">Role</label>
+                            <select id="role" name="role" required data-role-select
+                                    class="w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-2.5 text-sm text-maroon-950 outline-none focus:ring-2 focus:ring-maroon-700 @error('role') border-red-400 @enderror">
+                                @foreach ($roles as $role)
+                                    <option value="{{ $role->value }}" @selected(old('role', $invitee->role->value) === $role->value)>{{ $role->label() }}</option>
+                                @endforeach
+                            </select>
+                            @error('role')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                        <div @class(['hidden' => ! $invitee->role->needsDepartment()]) data-department-wrap>
+                            <label for="department_id" class="block text-xs font-medium text-maroon-900 mb-1">Department</label>
+                            <select id="department_id" name="department_id"
+                                    class="w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-2.5 text-sm text-maroon-950 outline-none focus:ring-2 focus:ring-maroon-700 @error('department_id') border-red-400 @enderror">
+                                <option value="">Select department</option>
+                                @foreach ($departments as $dept)
+                                    <option value="{{ $dept->id }}" @selected(old('department_id', $invitee->department_id) == $dept->id)>{{ $dept->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('department_id')
+                                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between border-t border-maroon-900/8 pt-4">
+                        <a href="{{ route('admin.users.index') }}"
+                           class="rounded-xl border border-maroon-900/20 bg-white px-4 py-2 text-sm font-semibold text-maroon-700 hover:bg-maroon-50">
+                            ← Back
+                        </a>
+                        <button type="submit"
+                                class="rounded-xl bg-maroon-800 px-5 py-2 text-sm font-semibold text-cream-50 shadow-sm hover:bg-maroon-700">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 @endsection

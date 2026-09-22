@@ -132,7 +132,6 @@
                         @php
                             $canApprove = \Illuminate\Support\Facades\Gate::allows('approve', $loa);
                             $canReject  = \Illuminate\Support\Facades\Gate::allows('reject', $loa);
-                            $isAdmin    = $user->role->is(\App\Enums\UserRole::Administrator);
 
                             $statusBadge = function ($status) {
                                 if (! $status) {
@@ -195,12 +194,6 @@
                                         </button>
                                     @endif
 
-                                    @if ($isAdmin)
-                                        <button type="button" disabled
-                                                class="inline-flex cursor-not-allowed items-center rounded-md border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-400 shadow-sm opacity-60">
-                                            Delete
-                                        </button>
-                                    @endif
                                 </div>
                             </td>
                         </tr>
