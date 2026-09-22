@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Staff\DashboardController;
 use App\Http\Controllers\Staff\LoaRequestController;
+use App\Http\Controllers\Staff\ProfileController;
 use App\Http\Controllers\Staff\ReportsController;
 use App\Http\Controllers\Student\IdentityController;
 use App\Http\Controllers\Student\LoaFormController;
@@ -39,30 +40,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/staff/dashboard', DashboardController::class)->name('staff.dashboard');
     Route::get('/staff/pipeline',  [LoaRequestController::class, 'pipeline'])->name('staff.pipeline');
     Route::get('/staff/reports',   ReportsController::class)->name('staff.reports');
-    Route::get('/staff/profile', function () {
-        $user     = auth()->user();
-        $acted    = \App\Models\LoaRequest::query()
-            ->where(function ($q) use ($user) {
-                $q->where('dept_head_by', $user->id)
-                  ->orWhere('saso_by', $user->id)
-                  ->orWhere('campus_director_by', $user->id)
-                  ->orWhere('registrar_by', $user->id)
-                  ->orWhere('guidance_by', $user->id)
-                  ->orWhere('rejected_by', $user->id);
-            })->count();
-        $approved = \App\Models\LoaRequest::query()
-            ->where(function ($q) use ($user) {
-                $q->where('dept_head_by', $user->id)
-                  ->orWhere('saso_by', $user->id)
-                  ->orWhere('campus_director_by', $user->id)
-                  ->orWhere('registrar_by', $user->id)
-                  ->orWhere('guidance_by', $user->id);
-            })->count();
-        $rejected = \App\Models\LoaRequest::query()
-            ->where('rejected_by', $user->id)
-            ->count();
-        return view('staff.profile', compact('user', 'acted', 'approved', 'rejected'));
-    })->name('staff.profile');
+    Route::get('/staff/profile',          [ProfileController::class, 'show'])->name('staff.profile');
+    Route::patch('/staff/profile',        [ProfileController::class, 'updateName'])->name('staff.profile.name');
+    Route::patch('/staff/profile/password', [ProfileController::class, 'updatePassword'])->name('staff.profile.password');
 
     // LOA detail / approve / reject (dept-scoped)
     Route::middleware('dept.scope')->group(function () {

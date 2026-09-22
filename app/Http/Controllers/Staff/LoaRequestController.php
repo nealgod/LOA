@@ -70,8 +70,15 @@ class LoaRequestController extends Controller
             'rejectedByActor',
         ]);
 
+        // Smart back URL — return to wherever the user came from (pipeline or dashboard).
+        $referer = request()->headers->get('referer', '');
+        $backUrl = str_contains($referer, '/staff/pipeline')
+            ? $referer
+            : route('staff.pipeline');
+
         return view('staff.loa-show', [
-            'loa' => $loaRequest,
+            'loa'     => $loaRequest,
+            'backUrl' => $backUrl,
         ]);
     }
 

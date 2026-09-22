@@ -95,48 +95,26 @@
                 </h2>
 
                 @forelse ($loa->attachments as $file)
-                    <div class="mb-4 overflow-hidden rounded-xl border border-maroon-900/10 last:mb-0">
-                        {{-- File header --}}
-                        <div class="flex items-center justify-between gap-3 bg-maroon-950/[0.03] px-4 py-2.5">
-                            <div class="flex min-w-0 items-center gap-2">
-                                <span class="text-base leading-none">
-                                    @if ($file->isImage()) 🖼 @else 📄 @endif
-                                </span>
-                                <span class="truncate text-sm font-medium text-maroon-950">{{ $file->original_name }}</span>
-                                <span class="shrink-0 text-xs text-maroon-900/40">{{ number_format($file->size / 1024, 1) }} KB</span>
-                            </div>
-                            <a href="{{ route('staff.loa.attachment', [$loa, $file]) }}"
-                               class="shrink-0 rounded-md border border-maroon-900/15 bg-white px-3 py-1 text-xs font-semibold text-maroon-700 hover:bg-maroon-50"
-                               download="{{ $file->original_name }}">
-                                Download
-                            </a>
+                    @php
+                        $ext  = strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION));
+                        $icon = match(true) {
+                            in_array($ext, ['jpg','jpeg','png','webp','gif']) => '🖼',
+                            $ext === 'pdf'                                    => '📋',
+                            in_array($ext, ['doc','docx'])                   => '📝',
+                            default                                           => '📄',
+                        };
+                    @endphp
+                    <a href="{{ route('staff.loa.attachment', [$loa, $file]) }}"
+                       target="_blank"
+                       rel="noopener"
+                       class="group mb-2 flex items-center gap-3 rounded-xl border border-maroon-900/10 bg-maroon-950/[0.02] px-4 py-3 transition hover:border-maroon-900/20 hover:bg-maroon-50 last:mb-0">
+                        <span class="text-xl leading-none">{{ $icon }}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-medium text-maroon-950 group-hover:text-maroon-700">{{ $file->original_name }}</p>
+                            <p class="text-xs text-maroon-900/40">{{ number_format($file->size / 1024, 1) }} KB · {{ strtoupper($ext) }}</p>
                         </div>
-
-                        {{-- Inline image preview --}}
-                        @if ($file->isImage())
-                            <div class="bg-maroon-950/[0.02] p-3">
-                                <img src="{{ route('staff.loa.attachment', [$loa, $file]) }}"
-                                     alt="{{ $file->original_name }}"
-                                     loading="lazy"
-                                     class="max-h-96 w-auto rounded-lg shadow-sm cursor-zoom-in object-contain"
-                                     data-lightbox-src="{{ route('staff.loa.attachment', [$loa, $file]) }}"
-                                     onclick="openLightbox(this.dataset.lightboxSrc, '{{ addslashes($file->original_name) }}')">
-                            </div>
-                        @else
-                            {{-- PDF / other: show download prompt --}}
-                            <div class="flex items-center gap-3 bg-cream-50 px-4 py-3">
-                                <span class="text-2xl">📄</span>
-                                <div class="text-sm">
-                                    <p class="font-medium text-maroon-950">{{ $file->original_name }}</p>
-                                    <a href="{{ route('staff.loa.attachment', [$loa, $file]) }}"
-                                       target="_blank"
-                                       class="text-xs text-maroon-700 underline underline-offset-2 hover:text-maroon-600">
-                                        Open in new tab ↗
-                                    </a>
-                                </div>
-                            </div>
-                        @endif
-                    </div>
+                        <span class="shrink-0 text-xs font-semibold text-maroon-700 opacity-0 transition group-hover:opacity-100">Open ↗</span>
+                    </a>
                 @empty
                     <p class="text-sm italic text-maroon-900/50">No files attached to this application.</p>
                 @endforelse
@@ -304,16 +282,10 @@
             @endcanany
 
             {{-- Navigation --}}
-            <div class="flex flex-wrap gap-3">
-                <a href="{{ route('staff.pipeline') }}"
-                   class="flex-1 rounded-xl border border-maroon-900/15 bg-white px-4 py-2.5 text-center text-sm font-semibold text-maroon-700 shadow-sm hover:bg-maroon-50">
-                    ← Pipeline
-                </a>
-                <a href="{{ route('staff.dashboard') }}"
-                   class="flex-1 rounded-xl border border-maroon-900/15 bg-white px-4 py-2.5 text-center text-sm font-semibold text-maroon-700 shadow-sm hover:bg-maroon-50">
-                    ← Dashboard
-                </a>
-            </div>
+            <a href="{{ $backUrl }}"
+               class="block w-full rounded-xl border border-maroon-900/15 bg-white px-4 py-2.5 text-center text-sm font-semibold text-maroon-700 shadow-sm hover:bg-maroon-50">
+                ← Back
+            </a>
         </div>
     </div>
 
@@ -355,39 +327,10 @@
         </div>
     </div>
 
-    {{-- Lightbox for image attachments --}}
-    <div id="lightbox"
-         class="fixed inset-0 z-50 hidden items-center justify-center bg-black/85 p-4"
-         onclick="closeLightbox()">
-        <div class="relative max-h-full max-w-5xl" onclick="event.stopPropagation()">
-            <button onclick="closeLightbox()"
-                    class="absolute -top-10 right-0 text-white/80 hover:text-white text-sm font-semibold">
-                ✕ Close
-            </button>
-            <img id="lightbox-img" src="" alt="" class="max-h-[85vh] max-w-full rounded-xl shadow-2xl object-contain">
-            <p id="lightbox-caption" class="mt-2 text-center text-xs text-white/60"></p>
-        </div>
-    </div>
 @endsection
 
 @push('scripts')
 <script>
-// ── Lightbox ──────────────────────────────────────────────────────────────────
-function openLightbox(src, caption) {
-    document.getElementById('lightbox-img').src = src;
-    document.getElementById('lightbox-caption').textContent = caption;
-    const lb = document.getElementById('lightbox');
-    lb.classList.remove('hidden');
-    lb.classList.add('flex');
-}
-function closeLightbox() {
-    const lb = document.getElementById('lightbox');
-    lb.classList.add('hidden');
-    lb.classList.remove('flex');
-    document.getElementById('lightbox-img').src = '';
-}
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-
 // ── Reject modal ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const modal        = document.getElementById('reject-modal');

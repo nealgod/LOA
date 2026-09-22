@@ -359,8 +359,10 @@ class ApprovalPipelineTest extends TestCase
             ->assertSeeText('Maria Santos')
             ->assertSeeText('maria@evsu.edu.ph')
             ->assertSeeText('Registrar')
-            ->assertSeeText('Account actions coming soon')
-            ->assertSeeText('Back to Dashboard');
+            ->assertSeeText('Edit Name')
+            ->assertSeeText('Change Password')
+            ->assertDontSeeText('Account actions coming soon')
+            ->assertDontSeeText('future release');
     }
 
     /**
