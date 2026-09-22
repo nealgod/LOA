@@ -23,6 +23,11 @@ Leave period : {{ $loa->start_date?->format('M j, Y') }} to {{ $loa->return_date
 Program      : {{ $loa->program?->name ?? '—' }}
 Department   : {{ $loa->department?->name ?? '—' }}
 
+ATTACHED DOCUMENT
+-----------------
+Your official approved LOA form (LOA-{{ $loa->control_number }}.pdf)
+is attached to this email. You can download and keep it for your records.
+
 NEXT STEPS
 ----------
 Please proceed to the Registrar's Office to complete any required clearance

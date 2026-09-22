@@ -463,6 +463,19 @@ class ApprovalPipelineTest extends TestCase
         $this->assertStringContainsString('LOA-' . $loa->control_number . '.pdf', $response->headers->get('Content-Disposition') ?? '');
     }
 
+    public function test_loa_approved_mail_has_pdf_attachment(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $loa->forceFill(['status' => 'approved'])->save();
+
+        $mailable = new \App\Mail\LoaApprovedMail($loa);
+        $attachments = $mailable->attachments();
+
+        $this->assertCount(1, $attachments);
+        $this->assertSame('LOA-' . $loa->control_number . '.pdf', $attachments[0]->as);
+        $this->assertSame('application/pdf', $attachments[0]->mime);
+    }
+
     private function seedLoas(int $dcsCount, int $dteCount): void
     {
         foreach (range(1, $dcsCount) as $i) {

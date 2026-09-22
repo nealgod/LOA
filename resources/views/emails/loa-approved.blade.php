@@ -43,6 +43,20 @@
                         </td>
                     </tr>
 
+                    {{-- PDF attachment notice --}}
+                    <tr>
+                        <td style="padding:4px 32px 16px;">
+                            <div style="background-color:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:12px 16px;">
+                                <p style="margin:0;font-size:13px;line-height:1.5;color:#065f46;font-weight:600;">
+                                    📎 Official Copy Attached
+                                </p>
+                                <p style="margin:4px 0 0;font-size:12px;line-height:1.5;color:#047857;">
+                                    Your official approved LOA form (<strong>LOA-{{ $loa->control_number }}.pdf</strong>) is attached to this email. You can download and keep it for your personal records or official clearance.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
                     {{-- Approval stages --}}
                     <tr>
                         <td style="padding:0 32px;">
