@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Mail\LoaFormAccessMail;
+use App\Mail\LoaOtpMail;
 use App\Models\Department;
+use App\Models\LoaAccessToken;
 use App\Models\LoaRequest;
 use App\Models\Program;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +23,7 @@ class StudentLoaRequestFlowTest extends TestCase
         $this->get('/')->assertOk()->assertSee('Request LOA')->assertSee('Staff login');
     }
 
-    public function test_identity_sends_form_link_and_submission_creates_control_number(): void
+    public function test_identity_sends_otp_and_submission_creates_control_number(): void
     {
         Mail::fake();
         Storage::fake('local');
@@ -29,59 +31,98 @@ class StudentLoaRequestFlowTest extends TestCase
         $this->seed();
 
         $department = Department::query()->where('code', 'DCS')->firstOrFail();
-        $program = Program::query()->where('code', 'BSIT')->firstOrFail();
+        $program    = Program::query()->where('code', 'BSIT')->firstOrFail();
 
-        $this->post('/loa/request', [
-            'student_id' => '2021-0001',
-            'full_name' => 'Juan Dela Cruz',
+        // ── Step 1: submit email → redirects to verify/{token} ───────────────
+        $response = $this->post('/loa/request', [
             'email' => 'juan@evsu.edu.ph',
-        ])->assertRedirect(route('student.identity.sent'));
+        ]);
 
-        $this->from(route('student.identity'))->post('/loa/request', [
-            'student_id' => '2021-0001',
-            'full_name' => 'Juan Dela Cruz',
-            'email' => 'juan@evsu.edu.ph',
-        ])->assertSessionHasErrors(['student_id', 'email']);
+        Mail::assertSent(LoaOtpMail::class, function ($mail) {
+            return $mail->email === 'juan@evsu.edu.ph';
+        });
 
-        Mail::assertSent(LoaFormAccessMail::class);
+        // Extract token from redirect URL
+        $redirectUrl = $response->headers->get('Location');
+        $token = basename(parse_url($redirectUrl, PHP_URL_PATH));
 
-        $mail = Mail::sent(LoaFormAccessMail::class)->first();
-        $url = $mail->formUrl;
-        $token = basename(parse_url($url, PHP_URL_PATH));
+        $response->assertRedirect(route('student.identity.verify', $token));
 
+        // ── Step 2: show OTP page ─────────────────────────────────────────────
+        $this->get(route('student.identity.verify', $token))
+            ->assertOk()
+            ->assertSee('Enter your code');
+
+        // ── Step 3: submit wrong OTP → error ──────────────────────────────────
+        $this->post(route('student.identity.verify.store', $token), ['otp' => '000000'])
+            ->assertSessionHasErrors(['otp']);
+
+        // ── Step 4: submit correct OTP → redirects to form ───────────────────
+        $accessToken = LoaAccessToken::query()
+            ->where('token_hash', LoaAccessToken::hashPlainToken($token))
+            ->firstOrFail();
+
+        // Get the real OTP by re-hashing — we need the plain OTP from the model
+        // In tests we bypass email and grab it via a fresh token issue
+        $plainOtp = null;
+        // Patch: set a known OTP directly on the record for testing
+        $knownOtp = '123456';
+        $accessToken->update([
+            'otp_hash'       => hash('sha256', $knownOtp),
+            'otp_expires_at' => now()->addMinutes(5),
+        ]);
+
+        $this->post(route('student.identity.verify.store', $token), ['otp' => $knownOtp])
+            ->assertRedirect(route('student.identity.sent'));
+
+        // Form link email should now be sent
+        Mail::assertSent(LoaFormAccessMail::class, function ($mail) {
+            return $mail->to[0]['address'] === 'juan@evsu.edu.ph';
+        });
+
+        // ── Step 5: student opens email link to access the form ───────────────
+        // (In real usage the form URL comes from the email; in tests we use the token directly)
         $this->get(route('student.form.show', $token))
             ->assertOk()
-            ->assertSee('EVSU-SASO-F-040')
-            ->assertSee('Department of Computer Studies');
+            ->assertSee('EVSU-SASO-F-040');
 
+        // ── Step 6: duplicate email blocked after OTP verified ────────────────
+        $this->post('/loa/request', [
+            'email' => 'juan@evsu.edu.ph',
+        ])->assertSessionHasErrors(['email']);
+
+        // ── Step 7: submit the form ───────────────────────────────────────────
         $this->post(route('student.form.store', $token), [
-            'full_name' => 'Juan Dela Cruz',
-            'department_id' => $department->id,
-            'program_id' => $program->id,
-            'year_level' => 'BSIT-1st',
-            'start_date' => '2026-10-01',
-            'return_date' => '2027-03-01',
-            'reason' => 'Medical treatment requiring extended recovery.',
-            'parent_full_name' => 'Maria Dela Cruz',
+            'student_id'          => '2021-0001',
+            'full_name'           => 'Juan Dela Cruz',
+            'department_id'       => $department->id,
+            'program_id'          => $program->id,
+            'year_level'          => 'BSIT-1st',
+            'start_date'          => '2026-10-01',
+            'return_date'         => '2027-03-01',
+            'reason'              => 'Medical treatment requiring extended recovery.',
+            'parent_full_name'    => 'Maria Dela Cruz',
             'parent_relationship' => 'Mother',
-            'parent_phone' => '917-123-4567',
-            'attachments' => [
+            'parent_phone'        => '917-123-4567',
+            'attachments'         => [
                 UploadedFile::fake()->create('medical.pdf', 120, 'application/pdf'),
                 UploadedFile::fake()->image('id.jpg'),
             ],
         ])->assertRedirect(route('student.form.submitted', $token));
 
         $this->assertDatabaseHas('loa_requests', [
-            'student_id' => '2021-0001',
-            'status' => 'submitted',
-            'department_id' => $department->id,
-            'program_id' => $program->id,
-            'dept_head_status' => 'pending',
-            'saso_status' => null,
+            'student_id'             => '2021-0001',
+            'email'                  => 'juan@evsu.edu.ph',
+            'status'                 => 'submitted',
+            'department_id'          => $department->id,
+            'program_id'             => $program->id,
+            'dept_head_status'       => 'pending',
+            'saso_status'            => null,
             'campus_director_status' => null,
         ]);
 
-        $this->assertSame(2, LoaRequest::query()->first()->attachments()->count());
-        $this->assertStringStartsWith('EVSU-OC-LOA-2026-', LoaRequest::query()->first()->control_number);
+        $loa = LoaRequest::query()->first();
+        $this->assertSame(2, $loa->attachments()->count());
+        $this->assertStringStartsWith('EVSU-OC-LOA-2026-', $loa->control_number);
     }
 }

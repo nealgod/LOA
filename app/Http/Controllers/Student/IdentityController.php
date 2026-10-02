@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
 use App\Mail\LoaFormAccessMail;
+use App\Mail\LoaOtpMail;
 use App\Models\LoaAccessToken;
 use App\Models\LoaRequest;
-use App\Services\CampusPresenceVerifier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -14,71 +14,136 @@ use Illuminate\View\View;
 
 class IdentityController extends Controller
 {
+    // ── Step 1: show email input ──────────────────────────────────────────────
+
     public function create(): View
     {
         return view('student.identity');
     }
 
-    public function store(Request $request, CampusPresenceVerifier $verifier): RedirectResponse
+    // ── Step 2: validate email, send OTP ─────────────────────────────────────
+
+    public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'student_id' => ['required', 'string', 'regex:/^\d{4}-\d{4,6}$/'],
-            'full_name' => ['required', 'string', 'max:255'],
+        $request->validate([
             'email' => [
                 'required',
                 'email',
                 'max:255',
                 function (string $attribute, mixed $value, \Closure $fail): void {
                     if (! str_ends_with(strtolower((string) $value), '@evsu.edu.ph')) {
-                        $fail('Personal emails (Gmail, Yahoo, Outlook, and others) are not accepted. Use your official EVSU email ending in @evsu.edu.ph.');
+                        $fail('Only official EVSU email addresses ending in @evsu.edu.ph are accepted.');
                     }
                 },
             ],
         ], [
-            'student_id.regex' => 'Student ID must follow the format YYYY-NNNNN, e.g. 2021-12345.',
-            'email.email' => 'Enter a valid official EVSU email address.',
+            'email.required' => 'Please enter your EVSU email address.',
+            'email.email'    => 'Enter a valid email address.',
         ]);
 
-        $validated['email'] = strtolower($validated['email']);
+        $email = strtolower($request->input('email'));
 
-        if ($this->hasActiveRequest($validated['student_id'], $validated['email'])) {
+        // Check for existing active request on this email
+        if ($this->hasActiveRequestByEmail($email)) {
             return back()
                 ->withInput()
-                ->withErrors([
-                    'student_id' => 'This student number or EVSU email already has an active LOA request. Only one request is allowed at a time.',
-                    'email' => 'This student number or EVSU email already has an active LOA request. Only one request is allowed at a time.',
-                ]);
+                ->withErrors(['email' => 'This EVSU email already has an active LOA request. Only one request is allowed at a time.']);
         }
 
-        $check = $verifier->verifyStudent(
-            $validated['student_id'],
-            $validated['full_name'],
-            $validated['email'],
-        );
-
-        if (! $check['ok']) {
-            return back()
-                ->withInput()
-                ->withErrors(['student_id' => $check['message'] ?? 'Student record could not be verified.']);
-        }
-
-        [$accessToken, $plainToken] = LoaAccessToken::issue($validated, $request->ip());
-        $formUrl = url('/loa/form/'.$plainToken);
+        // Issue a pending token + 6-digit OTP
+        [$accessToken, $plainToken, $plainOtp] = LoaAccessToken::issueForEmail($email, $request->ip());
 
         try {
-            Mail::to($validated['email'])->send(new LoaFormAccessMail($accessToken, $formUrl));
-        } catch (\Throwable $exception) {
-            report($exception);
+            Mail::to($email)->send(new LoaOtpMail($plainOtp, $email));
+        } catch (\Throwable $e) {
+            report($e);
+            // Clean up the token since email failed
+            $accessToken->delete();
 
             return back()
                 ->withInput()
-                ->withErrors(['email' => 'We could not send the form link right now. Please try again in a moment.']);
+                ->withErrors(['email' => 'We could not send the verification code right now. Please try again in a moment.']);
         }
 
         return redirect()
-            ->route('student.identity.sent')
-            ->with('email', $validated['email']);
+            ->route('student.identity.verify', ['token' => $plainToken])
+            ->with('otp_email', $email);
     }
+
+    // ── Step 3: show OTP entry form ───────────────────────────────────────────
+
+    public function showVerify(Request $request, string $token): View|RedirectResponse
+    {
+        $accessToken = $this->resolveToken($token);
+
+        if (! $accessToken) {
+            return redirect()
+                ->route('student.identity')
+                ->withErrors(['email' => 'This verification link is invalid or has expired. Please start again.']);
+        }
+
+        // Already verified — go to check-email (form link was already sent)
+        if ($accessToken->otp_verified) {
+            return redirect()
+                ->route('student.identity.sent')
+                ->with('email', $accessToken->email);
+        }
+
+        return view('student.verify-otp', [
+            'token' => $token,
+            'email' => $accessToken->email,
+        ]);
+    }
+
+    // ── Step 4: verify OTP, send form link email, show check-email page ──────
+
+    public function verify(Request $request, string $token): RedirectResponse
+    {
+        $request->validate([
+            'otp' => ['required', 'string', 'digits:6'],
+        ], [
+            'otp.required' => 'Please enter the 6-digit code from your email.',
+            'otp.digits'   => 'The code must be exactly 6 digits.',
+        ]);
+
+        $accessToken = $this->resolveToken($token);
+
+        if (! $accessToken) {
+            return redirect()
+                ->route('student.identity')
+                ->withErrors(['email' => 'This verification link is invalid or has expired. Please start again.']);
+        }
+
+        if ($accessToken->otp_verified) {
+            // Already verified — send them to check-email (form link was already sent)
+            return redirect()
+                ->route('student.identity.sent')
+                ->with('email', $accessToken->email);
+        }
+
+        if (! $accessToken->verifyOtp($request->input('otp'))) {
+            return back()
+                ->withErrors(['otp' => 'The code is incorrect or has expired. Check your email and try again.']);
+        }
+
+        // OTP correct — send the form link to their email
+        $formUrl = url('/loa/form/' . $token);
+
+        try {
+            Mail::to($accessToken->email)->send(new LoaFormAccessMail($accessToken, $formUrl));
+        } catch (\Throwable $e) {
+            report($e);
+            return back()
+                ->withErrors(['otp' => 'Email verified but we could not send your form link. Please try again.']);
+        }
+
+        // Show "check your email" page — form URL is only in the email
+        return redirect()
+            ->route('student.identity.sent')
+            ->with('email', $accessToken->email);
+    }
+
+    // ── Legacy "check email" page (kept for any old cached links) ────────────
 
     public function sent(Request $request): View|RedirectResponse
     {
@@ -89,21 +154,30 @@ class IdentityController extends Controller
         return view('student.check-email');
     }
 
-    private function hasActiveRequest(string $studentId, string $email): bool
-    {
-        $samePerson = function ($query) use ($studentId, $email) {
-            $query->where('student_id', $studentId)
-                ->orWhereRaw('LOWER(email) = ?', [$email]);
-        };
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
+    private function resolveToken(string $plainToken): ?LoaAccessToken
+    {
+        $hash = LoaAccessToken::hashPlainToken($plainToken);
+
+        return LoaAccessToken::query()
+            ->where('token_hash', $hash)
+            ->where('expires_at', '>', now())
+            ->whereNull('used_at')
+            ->first();
+    }
+
+    private function hasActiveRequestByEmail(string $email): bool
+    {
         $openLink = LoaAccessToken::query()
-            ->where($samePerson)
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->whereNull('used_at')
             ->where('expires_at', '>', now())
+            ->where('otp_verified', true)   // only block if they already verified
             ->exists();
 
         $openApplication = LoaRequest::query()
-            ->where($samePerson)
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->blockingNewRequest()
             ->exists();
 

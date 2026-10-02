@@ -165,4 +165,137 @@ document.addEventListener('DOMContentLoaded', () => {
             phoneInput.value = fmt(extractDigits(pasted));
         });
     }
+
+    // ── Multi-file attachments accumulator ───────────────────────────────────
+    const attachmentsInput = document.querySelector('[data-attachments-input]');
+    const attachmentsContainer = document.querySelector('[data-attachments-container]');
+    const attachmentsList = document.querySelector('[data-attachments-list]');
+    const attachmentsCount = document.querySelector('[data-attachments-count]');
+    const attachmentsError = document.querySelector('[data-attachments-error]');
+
+    if (attachmentsInput && attachmentsContainer && attachmentsList) {
+        let dt = new DataTransfer();
+
+        const formatSize = (bytes) => {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        };
+
+        const showError = (msg) => {
+            if (!attachmentsError) return;
+            attachmentsError.textContent = msg;
+            attachmentsError.classList.remove('hidden');
+        };
+
+        const clearError = () => {
+            if (!attachmentsError) return;
+            attachmentsError.textContent = '';
+            attachmentsError.classList.add('hidden');
+        };
+
+        const renderList = () => {
+            attachmentsList.innerHTML = '';
+            const files = Array.from(dt.files);
+
+            if (files.length === 0) {
+                attachmentsContainer.classList.add('hidden');
+                return;
+            }
+
+            attachmentsContainer.classList.remove('hidden');
+            if (attachmentsCount) {
+                attachmentsCount.textContent = `Selected files (${files.length} of 10)`;
+            }
+
+            files.forEach((file, index) => {
+                const row = document.createElement('div');
+                row.className = 'flex items-center justify-between rounded-lg border border-maroon-900/15 bg-white px-3 py-2 text-sm shadow-xs';
+
+                const left = document.createElement('div');
+                left.className = 'flex items-center gap-2 min-w-0 pr-2';
+
+                // Paperclip icon SVG
+                left.innerHTML = `
+                    <svg class="h-4 w-4 shrink-0 text-maroon-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                `;
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'truncate font-medium text-maroon-950';
+                nameSpan.textContent = file.name;
+
+                const sizeSpan = document.createElement('span');
+                sizeSpan.className = 'shrink-0 text-xs text-maroon-800/60';
+                sizeSpan.textContent = `(${formatSize(file.size)})`;
+
+                left.appendChild(nameSpan);
+                left.appendChild(sizeSpan);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'shrink-0 rounded p-1 text-maroon-600 hover:bg-maroon-900/10 hover:text-maroon-900 focus:outline-none';
+                removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
+                removeBtn.title = 'Remove file';
+                removeBtn.innerHTML = `
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                `;
+
+                removeBtn.addEventListener('click', () => {
+                    removeFile(index);
+                });
+
+                row.appendChild(left);
+                row.appendChild(removeBtn);
+                attachmentsList.appendChild(row);
+            });
+        };
+
+        const removeFile = (indexToRemove) => {
+            const nextDt = new DataTransfer();
+            Array.from(dt.files).forEach((file, idx) => {
+                if (idx !== indexToRemove) {
+                    nextDt.items.add(file);
+                }
+            });
+            dt = nextDt;
+            attachmentsInput.files = dt.files;
+            clearError();
+            renderList();
+        };
+
+        attachmentsInput.addEventListener('change', () => {
+            clearError();
+            const picked = Array.from(attachmentsInput.files);
+
+            if (picked.length === 0) {
+                // Cancelled dialog or empty; retain existing accumulated files
+                attachmentsInput.files = dt.files;
+                return;
+            }
+
+            for (const file of picked) {
+                if (dt.items.length >= 10) {
+                    showError('You can upload up to 10 files maximum.');
+                    break;
+                }
+                if (file.size > 5 * 1024 * 1024) {
+                    showError(`"${file.name}" exceeds the 5 MB limit.`);
+                    continue;
+                }
+                const alreadyAdded = Array.from(dt.files).some(
+                    existing => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+                );
+                if (!alreadyAdded) {
+                    dt.items.add(file);
+                }
+            }
+
+            attachmentsInput.files = dt.files;
+            renderList();
+        });
+    }
 });

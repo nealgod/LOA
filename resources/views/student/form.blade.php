@@ -5,8 +5,7 @@
 @section('content')
 <x-page-shell eyebrow="EVSU-SASO-F-040" title="Leave of Absence application" width="2xl">
     <x-slot:lead>
-        Verified as <strong>{{ $access->full_name }}</strong> ({{ $access->student_id }}) · {{ $access->email }}.
-        Leave may not exceed one year.
+        Submitting as <strong>{{ $access->email }}</strong>. Fill in the form below. Leave may not exceed one year.
     </x-slot:lead>
 
     <form method="POST" action="{{ route('student.form.store', $token) }}" enctype="multipart/form-data" class="space-y-4 rounded-2xl border border-maroon-900/10 bg-white p-6 sm:p-8">
@@ -16,15 +15,20 @@
         <div class="grid gap-4 sm:grid-cols-2">
             <div>
                 <label for="full_name" class="block text-sm font-medium text-maroon-900">Full name</label>
-                <input id="full_name" name="full_name" required value="{{ old('full_name', $access->full_name) }}"
+                <input id="full_name" name="full_name" required value="{{ old('full_name', $loa->full_name) }}"
                     placeholder="Lastname, Firstname, Middlename"
                     class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none ring-maroon-700 focus:ring-2">
                 @error('full_name') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
             </div>
             <div>
-                <label class="block text-sm font-medium text-maroon-900">Student number</label>
-                <input type="text" value="{{ $access->student_id }}" disabled
-                    class="mt-1 w-full rounded-xl border border-maroon-900/10 bg-maroon-900/5 px-3 py-3 text-base text-maroon-800/70 cursor-not-allowed">
+                <label for="student_id" class="block text-sm font-medium text-maroon-900">Student number</label>
+                <input id="student_id" name="student_id" required
+                    value="{{ old('student_id', $loa->student_id) }}"
+                    inputmode="numeric"
+                    placeholder="e.g. 2021-12345"
+                    data-student-id-input
+                    class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none ring-maroon-700 focus:ring-2">
+                @error('student_id') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
             </div>
         </div>
 
@@ -118,8 +122,20 @@
         <div>
             <label for="attachments" class="block text-sm font-medium text-maroon-900">Supporting files <span class="font-normal text-maroon-800/50">(optional)</span></label>
             <input id="attachments" name="attachments[]" type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp"
-                class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base file:mr-3 file:rounded-lg file:border-0 file:bg-maroon-800 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-cream-50">
-            <p class="mt-2 text-xs text-maroon-800/70">PDF or image (JPG, PNG, WEBP) — up to 10 files, 5 MB each. Not required but recommended.</p>
+                data-attachments-input
+                class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base file:mr-3 file:rounded-lg file:border-0 file:bg-maroon-800 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-cream-50 cursor-pointer">
+            <p class="mt-2 text-xs text-maroon-800/70">PDF or image (JPG, PNG, WEBP) — up to 10 files, 5 MB each. You can select multiple files together or add them one by one.</p>
+
+            <div id="attachments-container" class="mt-3 hidden space-y-2" data-attachments-container>
+                <div class="flex items-center justify-between text-xs font-semibold text-maroon-900">
+                    <span data-attachments-count>Selected files (0 of 10)</span>
+                    <span class="font-normal text-maroon-800/60">Choose Files again to add more</span>
+                </div>
+                <div class="space-y-1.5" data-attachments-list></div>
+            </div>
+
+            <p class="mt-2 hidden text-xs font-medium text-maroon-600" data-attachments-error></p>
+
             @error('attachments') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
             @error('attachments.*') <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p> @enderror
         </div>

@@ -25,7 +25,7 @@ class StaffUsersSeeder extends Seeder
                 'department_id' => null,
             ],
             [
-                'name' => 'DCS Department Head',
+                'name' => 'Joseph Jaymel S. Morphos',
                 'email' => 'dcs.head@evsu.edu.ph',
                 'role' => UserRole::DepartmentHead,
                 'department_id' => $dcs?->id,
@@ -37,13 +37,13 @@ class StaffUsersSeeder extends Seeder
                 'department_id' => $dte?->id,
             ],
             [
-                'name' => 'SASO Officer',
+                'name' => 'Dr. Joergen T. Arradaza, Jr.',
                 'email' => 'saso@evsu.edu.ph',
                 'role' => UserRole::SasoOfficer,
                 'department_id' => null,
             ],
             [
-                'name' => 'Campus Director',
+                'name' => 'Dr. Maricel A. Gomez',
                 'email' => 'director@evsu.edu.ph',
                 'role' => UserRole::CampusDirector,
                 'department_id' => null,
@@ -63,7 +63,14 @@ class StaffUsersSeeder extends Seeder
         ];
 
         foreach ($users as $record) {
-            if (User::query()->where('email', $record['email'])->exists()) {
+            $user = User::query()->where('email', $record['email'])->first();
+
+            if ($user) {
+                $user->update([
+                    'name'          => $record['name'],
+                    'role'          => $record['role'],
+                    'department_id' => $record['department_id'],
+                ]);
                 continue;
             }
 

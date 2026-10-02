@@ -28,10 +28,10 @@ class LoaFormController extends Controller
 
         $request = $access->loaRequest ?? LoaRequest::create([
             'loa_access_token_id' => $access->id,
-            'student_id' => $access->student_id,
-            'full_name' => $access->full_name,
-            'email' => $access->email,
-            'status' => 'draft',
+            'student_id' => '',   // filled by student in the form
+            'full_name'  => '',   // filled by student in the form
+            'email'      => $access->email,
+            'status'     => 'draft',
         ]);
 
         if ($request->isSubmitted()) {
@@ -66,6 +66,7 @@ class LoaFormController extends Controller
         }
 
         $validated = $request->validate([
+            'student_id'  => ['required', 'string', 'regex:/^\d{4}-\d{4,6}$/'],
             'department_id' => ['required', 'exists:departments,id'],
             'program_id' => [
                 'required',
@@ -101,6 +102,7 @@ class LoaFormController extends Controller
             }
 
             $loa->fill([
+                'student_id'          => $validated['student_id'],
                 'full_name'           => $validated['full_name'],
                 'department_id'       => $validated['department_id'],
                 'program_id'          => $validated['program_id'],
@@ -117,6 +119,12 @@ class LoaFormController extends Controller
             $loa->dept_head_status = ApprovalStageStatus::Pending;
             $loa->submitted_at = now();
             $loa->save();
+
+            // Backfill student_id + full_name onto the token for duplicate checks
+            $access->update([
+                'student_id' => $validated['student_id'],
+                'full_name'  => $validated['full_name'],
+            ]);
 
             foreach ($request->file('attachments', []) as $file) {
                 $path = $file->store('loa-attachments/'.$loa->id, 'local');
@@ -198,6 +206,13 @@ class LoaFormController extends Controller
 
         if (! $allowUsed && $access->used_at && $access->loaRequest?->isSubmitted()) {
             return redirect()->route('student.form.submitted', ['token' => $token]);
+        }
+
+        // Guard: OTP must be verified before the form is accessible
+        if (! $access->otp_verified) {
+            return redirect()
+                ->route('student.identity.verify', ['token' => $token])
+                ->withErrors(['otp' => 'Please verify your email first.']);
         }
 
         return $access;

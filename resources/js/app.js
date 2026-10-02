@@ -43,45 +43,259 @@ document.querySelectorAll('[data-password-toggle]').forEach((button) => {
     });
 });
 
+// ── Department → Program → Year level cascading selects ─────────────────
 const departmentFilter = document.querySelector('[data-department-filter]');
-const programSelect = document.querySelector('[data-program-select]');
-const programsJson = document.querySelector('[data-programs-json]');
+const programSelect    = document.querySelector('[data-program-select]');
+const yearSelect       = document.querySelector('[data-year-select]');
+const programsJson     = document.querySelector('[data-programs-json]');
+const yearSaved        = document.getElementById('year_level_saved');
 
 if (departmentFilter && programSelect && programsJson) {
-    const programs = JSON.parse(programsJson.textContent || '[]');
+    const programs        = JSON.parse(programsJson.textContent || '[]');
     const selectedProgram = programSelect.dataset.selectedProgram || '';
+    const savedYear       = yearSaved ? yearSaved.value : '';
+
+    const fillYears = (programCode) => {
+        if (!yearSelect) return;
+        yearSelect.innerHTML = '';
+        if (!programCode) {
+            yearSelect.append(new Option('Select program first', ''));
+            return;
+        }
+        const years = ['1st Year', '2nd Year', '3rd Year', '4th Year'];
+        yearSelect.append(new Option('Select year level', ''));
+        years.forEach((label) => {
+            const val = `${programCode}-${label.replace(' Year', '')}`;
+            const opt = new Option(`${programCode} — ${label}`, val);
+            yearSelect.append(opt);
+        });
+        if (savedYear && [...yearSelect.options].some(o => o.value === savedYear)) {
+            yearSelect.value = savedYear;
+        }
+    };
 
     const fillPrograms = () => {
         const departmentId = departmentFilter.value;
-        const matches = programs.filter((program) => String(program.department_id) === String(departmentId));
-
+        const matches = programs.filter(
+            (p) => String(p.department_id) === String(departmentId)
+        );
         programSelect.innerHTML = '';
 
         if (!departmentId) {
             programSelect.append(new Option('Select department first', ''));
+            fillYears('');
             return;
         }
-
         if (matches.length === 0) {
             programSelect.append(new Option('No programs found', ''));
+            fillYears('');
             return;
         }
-
         if (matches.length > 1) {
             programSelect.append(new Option('Select program', ''));
         }
-
-        matches.forEach((program) => {
-            programSelect.append(new Option(program.name, program.id));
-        });
+        matches.forEach((p) => programSelect.append(new Option(p.name, p.id)));
 
         if (matches.length === 1) {
             programSelect.value = String(matches[0].id);
-        } else if (selectedProgram && matches.some((program) => String(program.id) === String(selectedProgram))) {
+        } else if (
+            selectedProgram &&
+            matches.some((p) => String(p.id) === String(selectedProgram))
+        ) {
             programSelect.value = String(selectedProgram);
         }
+
+        // Fill years based on current program selection
+        const chosen = matches.find(p => String(p.id) === String(programSelect.value));
+        fillYears(chosen ? chosen.code : '');
     };
+
+    programSelect.addEventListener('change', () => {
+        const chosen = programs.find(p => String(p.id) === String(programSelect.value));
+        fillYears(chosen ? chosen.code : '');
+    });
 
     departmentFilter.addEventListener('change', fillPrograms);
     fillPrograms();
+}
+
+// ── Student ID input — format as YYYY-NNNNN ──────────────────────────────
+const studentIdInput = document.querySelector('[data-student-id-input]');
+if (studentIdInput) {
+    studentIdInput.addEventListener('input', () => {
+        let val = studentIdInput.value.replace(/[^\d]/g, ''); // digits only
+        if (val.length > 4) {
+            val = val.slice(0, 4) + '-' + val.slice(4, 10);
+        }
+        studentIdInput.value = val;
+    });
+
+    studentIdInput.addEventListener('paste', (e) => {
+        e.preventDefault();
+        let pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/[^\d]/g, '');
+        if (pasted.length > 4) {
+            pasted = pasted.slice(0, 4) + '-' + pasted.slice(4, 10);
+        }
+        studentIdInput.value = pasted;
+    });
+}
+
+// ── +63 phone input ──────────────────────────────────────────────────────
+const phoneInput = document.querySelector('[data-phone-input]');
+if (phoneInput) {
+    const extractDigits = (val) => {
+        let d = val.replace(/\D/g, '');
+        if (d.startsWith('0'))              d = d.slice(1);   // 09xx → 9xx
+        if (d.startsWith('63') && d.length > 10) d = d.slice(2); // +639xx → 9xx
+        return d.slice(0, 10);
+    };
+
+    const fmt = (d) => {
+        if (d.length <= 3) return d;
+        if (d.length <= 6) return d.slice(0, 3) + '-' + d.slice(3);
+        return d.slice(0, 3) + '-' + d.slice(3, 6) + '-' + d.slice(6);
+    };
+
+    phoneInput.addEventListener('input', () => {
+        const digits    = extractDigits(phoneInput.value);
+        const formatted = fmt(digits);
+        phoneInput.value = formatted;
+    });
+
+    phoneInput.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text');
+        phoneInput.value = fmt(extractDigits(pasted));
+    });
+}
+
+// ── Multi-file attachments accumulator ───────────────────────────────────
+const attachmentsInput = document.querySelector('[data-attachments-input]');
+const attachmentsContainer = document.querySelector('[data-attachments-container]');
+const attachmentsList = document.querySelector('[data-attachments-list]');
+const attachmentsCount = document.querySelector('[data-attachments-count]');
+const attachmentsError = document.querySelector('[data-attachments-error]');
+
+if (attachmentsInput && attachmentsContainer && attachmentsList) {
+    let dt = new DataTransfer();
+
+    const formatSize = (bytes) => {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    };
+
+    const showError = (msg) => {
+        if (!attachmentsError) return;
+        attachmentsError.textContent = msg;
+        attachmentsError.classList.remove('hidden');
+    };
+
+    const clearError = () => {
+        if (!attachmentsError) return;
+        attachmentsError.textContent = '';
+        attachmentsError.classList.add('hidden');
+    };
+
+    const renderList = () => {
+        attachmentsList.innerHTML = '';
+        const files = Array.from(dt.files);
+
+        if (files.length === 0) {
+            attachmentsContainer.classList.add('hidden');
+            return;
+        }
+
+        attachmentsContainer.classList.remove('hidden');
+        if (attachmentsCount) {
+            attachmentsCount.textContent = `Selected files (${files.length} of 10)`;
+        }
+
+        files.forEach((file, index) => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between rounded-lg border border-maroon-900/15 bg-white px-3 py-2 text-sm shadow-xs';
+
+            const left = document.createElement('div');
+            left.className = 'flex items-center gap-2 min-w-0 pr-2';
+
+            left.innerHTML = `
+                <svg class="h-4 w-4 shrink-0 text-maroon-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+            `;
+
+            const nameSpan = document.createElement('span');
+            nameSpan.className = 'truncate font-medium text-maroon-950';
+            nameSpan.textContent = file.name;
+
+            const sizeSpan = document.createElement('span');
+            sizeSpan.className = 'shrink-0 text-xs text-maroon-800/60';
+            sizeSpan.textContent = `(${formatSize(file.size)})`;
+
+            left.appendChild(nameSpan);
+            left.appendChild(sizeSpan);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'shrink-0 rounded p-1 text-maroon-600 hover:bg-maroon-900/10 hover:text-maroon-900 focus:outline-none';
+            removeBtn.setAttribute('aria-label', `Remove ${file.name}`);
+            removeBtn.title = 'Remove file';
+            removeBtn.innerHTML = `
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            `;
+
+            removeBtn.addEventListener('click', () => {
+                removeFile(index);
+            });
+
+            row.appendChild(left);
+            row.appendChild(removeBtn);
+            attachmentsList.appendChild(row);
+        });
+    };
+
+    const removeFile = (indexToRemove) => {
+        const nextDt = new DataTransfer();
+        Array.from(dt.files).forEach((file, idx) => {
+            if (idx !== indexToRemove) {
+                nextDt.items.add(file);
+            }
+        });
+        dt = nextDt;
+        attachmentsInput.files = dt.files;
+        clearError();
+        renderList();
+    };
+
+    attachmentsInput.addEventListener('change', () => {
+        clearError();
+        const picked = Array.from(attachmentsInput.files);
+
+        if (picked.length === 0) {
+            attachmentsInput.files = dt.files;
+            return;
+        }
+
+        for (const file of picked) {
+            if (dt.items.length >= 10) {
+                showError('You can upload up to 10 files maximum.');
+                break;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                showError(`"${file.name}" exceeds the 5 MB limit.`);
+                continue;
+            }
+            const alreadyAdded = Array.from(dt.files).some(
+                existing => existing.name === file.name && existing.size === file.size && existing.lastModified === file.lastModified
+            );
+            if (!alreadyAdded) {
+                dt.items.add(file);
+            }
+        }
+
+        attachmentsInput.files = dt.files;
+        renderList();
+    });
 }

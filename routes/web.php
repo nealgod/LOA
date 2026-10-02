@@ -72,6 +72,10 @@ Route::post('/loa/request',           [IdentityController::class, 'store'])
     ->middleware('throttle:loa-identity')
     ->name('student.identity.store');
 Route::get('/loa/request/check-email',[IdentityController::class, 'sent'])->name('student.identity.sent');
+Route::get('/loa/request/verify/{token}',  [IdentityController::class, 'showVerify'])->name('student.identity.verify');
+Route::post('/loa/request/verify/{token}', [IdentityController::class, 'verify'])
+    ->middleware('throttle:6,1')
+    ->name('student.identity.verify.store');
 
 Route::get('/loa/form/{token}',           [LoaFormController::class, 'show'])->name('student.form.show');
 Route::post('/loa/form/{token}',          [LoaFormController::class, 'store'])->name('student.form.store');
