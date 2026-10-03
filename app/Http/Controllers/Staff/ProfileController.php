@@ -21,8 +21,6 @@ class ProfileController extends Controller
                 $q->where('dept_head_by', $user->id)
                   ->orWhere('saso_by', $user->id)
                   ->orWhere('campus_director_by', $user->id)
-                  ->orWhere('registrar_by', $user->id)
-                  ->orWhere('guidance_by', $user->id)
                   ->orWhere('rejected_by', $user->id);
             })->count();
 
@@ -30,9 +28,7 @@ class ProfileController extends Controller
             ->where(function ($q) use ($user) {
                 $q->where('dept_head_by', $user->id)
                   ->orWhere('saso_by', $user->id)
-                  ->orWhere('campus_director_by', $user->id)
-                  ->orWhere('registrar_by', $user->id)
-                  ->orWhere('guidance_by', $user->id);
+                  ->orWhere('campus_director_by', $user->id);
             })->count();
 
         $rejected = LoaRequest::query()

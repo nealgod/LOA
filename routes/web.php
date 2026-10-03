@@ -27,6 +27,11 @@ Route::post('/staff/logout', [LoginController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
 
+// GET fallback — handles direct navigation to /staff/logout (e.g. browser back button, stale link)
+Route::get('/staff/logout', function () {
+    return redirect()->route('login');
+});
+
 // ── Invitation setup (public — guest only, no auth required) ─────────────────
 Route::middleware('guest')->group(function () {
     Route::get('/staff/invite/{token}',  [InvitationController::class, 'show'])->name('invitation.show');

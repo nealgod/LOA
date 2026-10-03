@@ -143,7 +143,7 @@ class IdentityController extends Controller
             ->with('email', $accessToken->email);
     }
 
-    // ── Legacy "check email" page (kept for any old cached links) ────────────
+    // ── "Check your email" page — shown after OTP is verified and form link is sent ──
 
     public function sent(Request $request): View|RedirectResponse
     {

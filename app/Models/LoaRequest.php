@@ -40,12 +40,6 @@ class LoaRequest extends Model
         'campus_director_status',
         'campus_director_at',
         'campus_director_by',
-        'registrar_status',
-        'registrar_at',
-        'registrar_by',
-        'guidance_status',
-        'guidance_at',
-        'guidance_by',
         'rejected_at',
         'rejected_by',
         'rejection_reason',
@@ -60,14 +54,10 @@ class LoaRequest extends Model
             'dept_head_at'            => 'datetime',
             'saso_at'                 => 'datetime',
             'campus_director_at'      => 'datetime',
-            'registrar_at'            => 'datetime',
-            'guidance_at'             => 'datetime',
             'rejected_at'             => 'datetime',
             'dept_head_status'        => ApprovalStageStatus::class,
             'saso_status'             => ApprovalStageStatus::class,
             'campus_director_status'  => ApprovalStageStatus::class,
-            'registrar_status'        => ApprovalStageStatus::class,
-            'guidance_status'         => ApprovalStageStatus::class,
         ];
     }
 
@@ -104,16 +94,6 @@ class LoaRequest extends Model
     public function campusDirectorActor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'campus_director_by');
-    }
-
-    public function registrarActor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'registrar_by');
-    }
-
-    public function guidanceActor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'guidance_by');
     }
 
     public function rejectedByActor(): BelongsTo
@@ -193,8 +173,6 @@ class LoaRequest extends Model
         $dh   = $this->dept_head_status;
         $saso = $this->saso_status;
         $cd   = $this->campus_director_status;
-        $reg  = $this->registrar_status;
-        $guid = $this->guidance_status;
 
         if ($dh === null || $dh->is(ApprovalStageStatus::Pending))   return 'dept_head';
         if ($dh->is(ApprovalStageStatus::Rejected))                   return 'rejected';
@@ -205,17 +183,9 @@ class LoaRequest extends Model
         if ($cd === null || $cd->is(ApprovalStageStatus::Pending))    return 'campus_director';
         if ($cd->is(ApprovalStageStatus::Rejected))                   return 'rejected';
 
-        if ($reg === null || $reg->is(ApprovalStageStatus::Pending))  return 'registrar';
-        if ($reg->is(ApprovalStageStatus::Rejected))                  return 'rejected';
-
-        if ($guid === null || $guid->is(ApprovalStageStatus::Pending)) return 'guidance';
-        if ($guid->is(ApprovalStageStatus::Rejected))                  return 'rejected';
-
         if ($dh->is(ApprovalStageStatus::Approved)
             && $saso->is(ApprovalStageStatus::Approved)
-            && $cd->is(ApprovalStageStatus::Approved)
-            && $reg->is(ApprovalStageStatus::Approved)
-            && $guid->is(ApprovalStageStatus::Approved)) {
+            && $cd->is(ApprovalStageStatus::Approved)) {
             return 'done';
         }
 
@@ -228,8 +198,6 @@ class LoaRequest extends Model
             'dept_head'       => 'Pending: Dept Head',
             'saso'            => 'Pending: SASO',
             'campus_director' => 'Pending: Campus Director',
-            'registrar'       => 'Pending: Registrar',
-            'guidance'        => 'Pending: Guidance',
             'done'            => 'Fully Approved',
             'rejected'        => 'Rejected',
             default           => 'Unknown',
@@ -242,27 +210,24 @@ class LoaRequest extends Model
             'dept_head'       => $this->dept_head_status,
             'saso'            => $this->saso_status,
             'campus_director' => $this->campus_director_status,
-            'registrar'       => $this->registrar_status,
-            'guidance'        => $this->guidance_status,
             default           => null,
         };
     }
 
     private function roleStageKey(User $user): ?string
     {
+        // Registrar and Guidance are view-only — they have no approval stage key.
         return match ($user->role) {
             UserRole::DepartmentHead  => 'dept_head',
             UserRole::SasoOfficer     => 'saso',
             UserRole::CampusDirector  => 'campus_director',
-            UserRole::Registrar       => 'registrar',
-            UserRole::Guidance        => 'guidance',
             default                   => null,
         };
     }
 
     private function priorStagesAllApproved(string $stageKey): bool
     {
-        $order = ['dept_head', 'saso', 'campus_director', 'registrar', 'guidance'];
+        $order = ['dept_head', 'saso', 'campus_director'];
         $idx = array_search($stageKey, $order, true);
         if ($idx === false || $idx === 0) {
             return true;
@@ -273,8 +238,6 @@ class LoaRequest extends Model
                 'dept_head'       => $this->dept_head_status,
                 'saso'            => $this->saso_status,
                 'campus_director' => $this->campus_director_status,
-                'registrar'       => $this->registrar_status,
-                'guidance'        => $this->guidance_status,
             };
             if (! $priorStatus || ! $priorStatus->is(ApprovalStageStatus::Approved)) {
                 return false;
@@ -295,8 +258,6 @@ class LoaRequest extends Model
             'dept_head'       => $this->dept_head_status,
             'saso'            => $this->saso_status,
             'campus_director' => $this->campus_director_status,
-            'registrar'       => $this->registrar_status,
-            'guidance'        => $this->guidance_status,
         };
 
         if (! $currentStatus || ! $currentStatus->is(ApprovalStageStatus::Pending)) {
@@ -319,7 +280,7 @@ class LoaRequest extends Model
         }
 
         $now   = now();
-        $order = ['dept_head', 'saso', 'campus_director', 'registrar', 'guidance'];
+        $order = ['dept_head', 'saso', 'campus_director'];
         $idx   = array_search($stageKey, $order, true);
 
         $fullyApproved = false;
@@ -340,12 +301,10 @@ class LoaRequest extends Model
             $this->update($changes);
             $this->refresh();
 
-            // All 5 stages approved → fully done.
+            // All 3 stages approved → fully done.
             if ($this->dept_head_status?->is(ApprovalStageStatus::Approved)
                 && $this->saso_status?->is(ApprovalStageStatus::Approved)
-                && $this->campus_director_status?->is(ApprovalStageStatus::Approved)
-                && $this->registrar_status?->is(ApprovalStageStatus::Approved)
-                && $this->guidance_status?->is(ApprovalStageStatus::Approved)) {
+                && $this->campus_director_status?->is(ApprovalStageStatus::Approved)) {
                 $this->update(['status' => 'approved']);
                 $fullyApproved = true;
             }
@@ -355,7 +314,7 @@ class LoaRequest extends Model
         if ($fullyApproved) {
             $this->refresh();
             try {
-                $this->load(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'registrarActor', 'guidanceActor']);
+                $this->load(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor']);
                 Mail::to($this->email)->send(new LoaApprovedMail($this));
             } catch (\Throwable $e) {
                 report($e);

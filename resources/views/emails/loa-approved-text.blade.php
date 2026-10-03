@@ -5,7 +5,7 @@ Control Number: {{ $loa->control_number }}
 Dear {{ $loa->full_name }},
 
 Your Leave of Absence request has been APPROVED by all required offices.
-All five approval stages have been completed:
+All three approval stages have been completed:
 
   [OK] Department Head{{ $loa->deptHeadActor ? ' — ' . $loa->deptHeadActor->name : '' }}{{ $loa->dept_head_at ? ' (' . $loa->dept_head_at->format('M j, Y') . ')' : '' }}
 
@@ -13,20 +13,11 @@ All five approval stages have been completed:
 
   [OK] Campus Director{{ $loa->campusDirectorActor ? ' — ' . $loa->campusDirectorActor->name : '' }}{{ $loa->campus_director_at ? ' (' . $loa->campus_director_at->format('M j, Y') . ')' : '' }}
 
-  [OK] Registrar{{ $loa->registrarActor ? ' — ' . $loa->registrarActor->name : '' }}{{ $loa->registrar_at ? ' (' . $loa->registrar_at->format('M j, Y') . ')' : '' }}
-
-  [OK] Guidance Office{{ $loa->guidanceActor ? ' — ' . $loa->guidanceActor->name : '' }}{{ $loa->guidance_at ? ' (' . $loa->guidance_at->format('M j, Y') . ')' : '' }}
-
 LEAVE DETAILS
 -------------
 Leave period : {{ $loa->start_date?->format('M j, Y') }} to {{ $loa->return_date?->format('M j, Y') }}
 Program      : {{ $loa->program?->name ?? '—' }}
 Department   : {{ $loa->department?->name ?? '—' }}
-
-ATTACHED DOCUMENT
------------------
-Your official approved LOA form (LOA-{{ $loa->control_number }}.pdf)
-is attached to this email. You can download and keep it for your records.
 
 NEXT STEPS
 ----------

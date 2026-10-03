@@ -36,7 +36,7 @@ class LoaRequestController extends Controller
         }
 
         $loas = LoaRequest::query()
-            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'registrarActor', 'guidanceActor', 'rejectedByActor'])
+            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'rejectedByActor'])
             ->scopeForUser($user)
             ->when($filterStatus, fn ($q) => $q->where('status', $filterStatus))
             ->when($filterDept && ! $isDh, fn ($q) => $q->where('department_id', $filterDept))
@@ -85,8 +85,6 @@ class LoaRequestController extends Controller
             'deptHeadActor',
             'sasoActor',
             'campusDirectorActor',
-            'registrarActor',
-            'guidanceActor',
             'rejectedByActor',
         ]);
 

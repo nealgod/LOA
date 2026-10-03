@@ -66,14 +66,14 @@ class ReportsController extends Controller
             ? round(($approvedCount / $totalCount) * 100)
             : 0;
 
-        // ── Avg processing days (submission → Guidance final approval) ────────
+        // ── Avg processing days (submission → Campus Director final approval) ──
         $processed = (clone $baseYear)
             ->whereNotNull('submitted_at')
-            ->whereNotNull('guidance_at')
-            ->get(['submitted_at', 'guidance_at']);
+            ->whereNotNull('campus_director_at')
+            ->get(['submitted_at', 'campus_director_at']);
 
         $avgProcessingDays = $processed->isNotEmpty()
-            ? round($processed->avg(fn ($r) => $r->submitted_at->diffInDays($r->guidance_at)), 1)
+            ? round($processed->avg(fn ($r) => $r->submitted_at->diffInDays($r->campus_director_at)), 1)
             : '—';
 
         // ── LOAs by department ────────────────────────────────────────────────

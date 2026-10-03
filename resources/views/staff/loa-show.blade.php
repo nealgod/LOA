@@ -170,18 +170,6 @@
                             'actor'  => $loa->campusDirectorActor,
                             'at'     => $loa->campus_director_at,
                         ],
-                        [
-                            'label'  => 'Registrar',
-                            'status' => $loa->registrar_status,
-                            'actor'  => $loa->registrarActor,
-                            'at'     => $loa->registrar_at,
-                        ],
-                        [
-                            'label'  => 'Guidance Office',
-                            'status' => $loa->guidance_status,
-                            'actor'  => $loa->guidanceActor,
-                            'at'     => $loa->guidance_at,
-                        ],
                     ];
                 @endphp
 
@@ -240,8 +228,7 @@
                 @if ($stageName === 'done')
                     <div class="mt-5 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-center">
                         <p class="text-sm font-semibold text-emerald-700">✓ Fully Approved</p>
-                        <p class="text-xs text-emerald-600 mt-0.5">All approval stages completed.</p>
-                    </div>
+                        <p class="text-xs text-emerald-600 mt-0.5">All approval stages completed.</p>                    </div>
                 @elseif ($loa->status === 'rejected')
                     <div class="mt-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-center">
                         <p class="text-sm font-semibold text-red-700">✕ Rejected</p>

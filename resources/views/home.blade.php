@@ -33,8 +33,7 @@
                 @endguest
             </div>
             @guest
-                <p class="mt-5 text-sm text-maroon-800/70">Students do not create an account. Staff (Department Head, SASO, Campus Director, Registrar, Guidance) sign in here.</p>
-            @else
+                <p class="mt-5 text-sm text-maroon-800/70">Students do not create an account. Staff (Department Head, SASO, Campus Director, Registrar, Guidance) sign in here.</p>            @else
                 <p class="mt-5 text-sm text-maroon-800/70">Signed in as <strong>{{ auth()->user()->name }}</strong> &middot; {{ auth()->user()->role->label() }}.</p>
             @endguest
         </div>
@@ -56,7 +55,7 @@
                 </li>
                 <li class="flex gap-4">
                     <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-maroon-800 text-sm font-bold text-cream-50">4</span>
-                    <span>Department Head, SASO, Campus Director, Registrar, then Guidance Office review it. No e-signature drawing.</span>
+                    <span>Department Head, SASO, then Campus Director review and approve it. No e-signature drawing.</span>
                 </li>
             </ol>
         </div>
@@ -76,8 +75,8 @@
         @foreach ([
             ['Public request', 'No student portal. Identity is confirmed through your official EVSU email link.'],
             ['Control Number', 'Each application gets an ID such as EVSU-OC-LOA-2026-0001 for tracking and the PDF.'],
-            ['Multi-level review', 'Department Head (parent call) → SASO Officer → Campus Director → Registrar → Guidance Office sequential approval.'],
-            ['Registrar & Guidance', 'After approval, classes are marked Withdrawn and Guidance records exit counseling.'],
+            ['Multi-level review', 'Department Head (parent call) → SASO Officer → Campus Director sequential approval.'],
+            ['Registrar & Guidance', 'After Campus Director approval, Registrar and Guidance update their records for clearance.'],
             ['Return follow-up', 'Seven days before your return date, you confirm if you are coming back.'],
             ['Staff workspace', 'Employees are invited by the System Administrator to access their office queue.'],
         ] as $card)

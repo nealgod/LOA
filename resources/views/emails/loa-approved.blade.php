@@ -38,7 +38,7 @@
                             </p>
                             <p style="margin:0 0 12px;font-size:15px;line-height:1.7;color:#2b070d;">
                                 Your Leave of Absence request has been <strong style="color:#047857;">approved</strong> by all required offices.
-                                All five approval stages have been completed.
+                                All three approval stages have been completed.
                             </p>
                         </td>
                     </tr>
@@ -65,8 +65,6 @@
                                     ['Department Head', $loa->deptHeadActor, $loa->dept_head_at],
                                     ['SASO Officer',    $loa->sasoActor,     $loa->saso_at],
                                     ['Campus Director', $loa->campusDirectorActor, $loa->campus_director_at],
-                                    ['Registrar',       $loa->registrarActor, $loa->registrar_at],
-                                    ['Guidance Office', $loa->guidanceActor,  $loa->guidance_at],
                                 ] as [$label, $actor, $at])
                                 <tr>
                                     <td style="padding:4px 0;font-size:13px;color:#15803d;">

@@ -17,5 +17,14 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // 419 CSRF token mismatch — session expired or stale page.
+        // Redirect to login instead of showing the "Page Expired" error.
+        $exceptions->render(function (
+            \Illuminate\Session\TokenMismatchException $e,
+            \Illuminate\Http\Request $request
+        ) {
+            return redirect()
+                ->route('login')
+                ->withErrors(['email' => 'Your session expired. Please log in again.']);
+        });
     })->create();
