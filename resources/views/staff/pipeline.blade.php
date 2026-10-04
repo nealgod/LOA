@@ -152,6 +152,13 @@
                                         {{ optional($loa->program)->code ?? '—' }} · {{ optional($loa->department)->name ?? '—' }}
                                     </div>
                                 @endif
+                                @if ($loa->resubmit_count > 0)
+                                    <div class="mt-0.5">
+                                        <span class="rounded-full border border-amber-400 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                            Resubmission #{{ $loa->resubmit_count }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
                             <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->dept_head_status) !!}</td>
                             <td class="whitespace-nowrap px-3 py-3 text-sm sm:px-4">{!! $statusBadge($loa->saso_status) !!}</td>

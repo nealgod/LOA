@@ -10,6 +10,7 @@ use App\Http\Controllers\Staff\ProfileController;
 use App\Http\Controllers\Staff\ReportsController;
 use App\Http\Controllers\Student\IdentityController;
 use App\Http\Controllers\Student\LoaFormController;
+use App\Http\Controllers\Student\ResubmitController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public ────────────────────────────────────────────────────────────────────
@@ -85,3 +86,10 @@ Route::post('/loa/request/verify/{token}', [IdentityController::class, 'verify']
 Route::get('/loa/form/{token}',           [LoaFormController::class, 'show'])->name('student.form.show');
 Route::post('/loa/form/{token}',          [LoaFormController::class, 'store'])->name('student.form.store');
 Route::get('/loa/form/{token}/submitted', [LoaFormController::class, 'submitted'])->name('student.form.submitted');
+
+// ── LOA resubmission (token from rejection email) ─────────────────────────────
+Route::get('/loa/resubmit/{token}',       [ResubmitController::class, 'show'])->name('student.resubmit.show');
+Route::post('/loa/resubmit/{token}',      [ResubmitController::class, 'store'])
+    ->middleware('throttle:5,1')
+    ->name('student.resubmit.store');
+Route::get('/loa/resubmit/{token}/done',  [ResubmitController::class, 'done'])->name('student.resubmit.done');

@@ -75,10 +75,29 @@
                     <tr>
                         <td style="padding:24px 32px 0;">
                             <p style="margin:0 0 8px;font-size:14px;font-weight:700;color:#2b070d;">What You Can Do</p>
-                            <p style="margin:0;font-size:13px;line-height:1.7;color:#4a0e18;">
-                                If you believe this decision was made in error or would like to address the concerns raised,
-                                please visit the SASO Office or contact your Department Head for guidance on next steps.
+                            <p style="margin:0 0 16px;font-size:13px;line-height:1.7;color:#4a0e18;">
+                                If you would like to address the concerns raised and resubmit your application,
+                                click the button below. The link is valid for <strong>7 days</strong> and can only be used once.
                             </p>
+                            @if ($resubmitUrl)
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                                <tr>
+                                    <td style="border-radius:8px;background-color:#4a0e18;">
+                                        <a href="{{ $resubmitUrl }}"
+                                           style="display:inline-block;padding:12px 24px;font-size:14px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;">
+                                            Resubmit My LOA Application
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                            <p style="margin:10px 0 0;font-size:12px;color:#8a1c30;">
+                                Or copy this link: <span style="font-family:monospace;word-break:break-all;">{{ $resubmitUrl }}</span>
+                            </p>
+                            @else
+                            <p style="margin:0;font-size:13px;line-height:1.7;color:#4a0e18;">
+                                Please visit the SASO Office or contact your Department Head for guidance on next steps.
+                            </p>
+                            @endif
                         </td>
                     </tr>
 

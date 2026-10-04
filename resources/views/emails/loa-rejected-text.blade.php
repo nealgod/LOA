@@ -21,11 +21,18 @@ REASON
 {{ $loa->rejection_reason }}
 
 @endif
-WHAT YOU CAN DO
----------------
-If you believe this decision was made in error or would like to address
-the concerns raised, please visit the SASO Office or contact your
-Department Head for guidance on next steps.
+RESUBMIT YOUR APPLICATION
+--------------------------
+@if ($resubmitUrl)
+You may address the concerns raised and resubmit your application using
+the link below. The link is valid for 7 days and can only be used once.
+
+{{ $resubmitUrl }}
+
+@else
+Please visit the SASO Office or contact your Department Head for guidance
+on next steps.
+@endif
 
 For questions or assistance, contact the SASO Office or your Department Head.
 

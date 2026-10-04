@@ -15,6 +15,7 @@ class LoaRejectedMail extends Mailable
 
     public function __construct(
         public LoaRequest $loa,
+        public ?string $resubmitUrl = null,
     ) {}
 
     public function envelope(): Envelope

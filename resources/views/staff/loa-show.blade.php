@@ -28,6 +28,11 @@
         @elseif ($stageName === 'rejected')
             <span class="rounded-full border border-red-600 bg-red-600 px-3 py-1 text-xs font-medium text-white">Rejected</span>
         @endif
+        @if ($loa->resubmit_count > 0)
+            <span class="rounded-full border border-amber-500 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                Resubmission #{{ $loa->resubmit_count }}
+            </span>
+        @endif
         @if ($loa->submitted_at)
             <span class="ml-auto text-xs text-maroon-800/50">Submitted {{ $loa->submitted_at->format('M j, Y g:i A') }}</span>
         @endif
@@ -35,227 +40,240 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 
-        {{-- ── Left column: student details + attachments ───────────────────── --}}
-        <div class="space-y-6 lg:col-span-2">
+        {{-- ── Left column ──────────────────────────────────────────────────── --}}
+        <div class="space-y-4 lg:col-span-2">
 
-            {{-- Student details --}}
-            <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm">
-                <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-maroon-600">Student Details</h2>
-                <div class="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+            {{-- Student details — always visible, compact grid --}}
+            <div class="rounded-2xl border border-maroon-900/10 bg-white p-5 shadow-sm">
+                <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-maroon-600">Student Details</h2>
+                <div class="grid grid-cols-2 gap-x-6 gap-y-2.5 text-sm sm:grid-cols-3">
                     <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50">Student ID</p>
+                        <p class="text-xs text-maroon-900/50">Student ID</p>
                         <p class="mt-0.5 font-mono font-semibold text-maroon-950">{{ $loa->student_id ?? '—' }}</p>
                     </div>
                     <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50">Email</p>
-                        <p class="mt-0.5 text-maroon-950">{{ $loa->email }}</p>
+                        <p class="text-xs text-maroon-900/50">Email</p>
+                        <p class="mt-0.5 text-maroon-950 truncate">{{ $loa->email }}</p>
                     </div>
                     <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50">Year Level</p>
+                        <p class="text-xs text-maroon-900/50">Year Level</p>
                         <p class="mt-0.5 text-maroon-950">{{ $loa->year_level ?? '—' }}</p>
                     </div>
                     <div>
-                        <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50">Program</p>
+                        <p class="text-xs text-maroon-900/50">Program</p>
                         <p class="mt-0.5 text-maroon-950">{{ $loa->program?->name ?? '—' }}</p>
                     </div>
-                    <div class="sm:col-span-2">
-                        <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50">Leave Period</p>
+                    <div class="col-span-2">
+                        <p class="text-xs text-maroon-900/50">Leave Period</p>
                         <p class="mt-0.5 font-semibold text-maroon-950">
-                            {{ $loa->start_date?->format('F j, Y') ?? '—' }}
+                            {{ $loa->start_date?->format('M j, Y') ?? '—' }}
                             <span class="mx-1 text-maroon-900/40">→</span>
-                            {{ $loa->return_date?->format('F j, Y') ?? '—' }}
+                            {{ $loa->return_date?->format('M j, Y') ?? '—' }}
                             @if ($loa->start_date && $loa->return_date)
-                                <span class="ml-2 text-xs font-normal text-maroon-900/50">({{ $loa->start_date->diffInDays($loa->return_date) }} days)</span>
+                                <span class="ml-1 text-xs font-normal text-maroon-900/50">({{ $loa->start_date->diffInDays($loa->return_date) }} days)</span>
                             @endif
+                        </p>
+                    </div>
+                    <div class="col-span-2 sm:col-span-3">
+                        <p class="text-xs text-maroon-900/50">Parent / Guardian</p>
+                        <p class="mt-0.5 text-maroon-950 text-sm">
+                            <span class="font-semibold">{{ $loa->parent_full_name }}</span>
+                            <span class="text-maroon-900/50"> ({{ $loa->parent_relationship }})</span>
+                            <span class="mx-1 text-maroon-900/30">·</span>
+                            {{ $loa->parent_phone }}
                         </p>
                     </div>
                 </div>
 
-                <div class="mt-4 border-t border-maroon-900/5 pt-4">
-                    <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50 mb-1">Reason for Leave</p>
-                    <p class="text-sm leading-relaxed text-maroon-800/85 whitespace-pre-wrap">{{ $loa->reason }}</p>
-                </div>
-
-                <div class="mt-4 border-t border-maroon-900/5 pt-4">
-                    <p class="text-xs font-medium uppercase tracking-wider text-maroon-900/50 mb-1">Parent / Guardian</p>
-                    <p class="text-sm text-maroon-800/85">
-                        <span class="font-semibold text-maroon-950">{{ $loa->parent_full_name }}</span>
-                        <span class="text-maroon-900/50"> ({{ $loa->parent_relationship }})</span>
-                        <span class="mx-1 text-maroon-900/30">·</span>
-                        {{ $loa->parent_phone }}
-                    </p>
-                </div>
+                {{-- Reason — collapsible --}}
+                <details class="mt-3 border-t border-maroon-900/5 pt-3 group">
+                    <summary class="flex cursor-pointer items-center justify-between list-none">
+                        <p class="text-xs font-semibold uppercase tracking-wider text-maroon-900/50">Reason for Leave</p>
+                        <span class="text-xs text-maroon-900/40 group-open:hidden">Show ▾</span>
+                        <span class="text-xs text-maroon-900/40 hidden group-open:inline">Hide ▴</span>
+                    </summary>
+                    <p class="mt-2 text-sm leading-relaxed text-maroon-800/85 whitespace-pre-wrap">{{ $loa->reason }}</p>
+                </details>
             </div>
 
-            {{-- Attachments --}}
-            <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm">
-                <h2 class="mb-4 text-sm font-semibold uppercase tracking-wider text-maroon-600">
-                    Supporting Documents
-                    <span class="ml-1 rounded-full bg-maroon-100 px-2 py-0.5 text-xs font-bold text-maroon-700">{{ $loa->attachments->count() }}</span>
-                </h2>
-
-                @forelse ($loa->attachments as $file)
-                    @php
-                        $ext  = strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION));
-                        $icon = match(true) {
-                            in_array($ext, ['jpg','jpeg','png','webp','gif']) => '🖼',
-                            $ext === 'pdf'                                    => '📋',
-                            in_array($ext, ['doc','docx'])                   => '📝',
-                            default                                           => '📄',
-                        };
-                    @endphp
-                    <a href="{{ route('staff.loa.attachment', [$loa, $file]) }}"
-                       target="_blank"
-                       rel="noopener"
-                       class="group mb-2 flex items-center gap-3 rounded-xl border border-maroon-900/10 bg-maroon-950/[0.02] px-4 py-3 transition hover:border-maroon-900/20 hover:bg-maroon-50 last:mb-0">
-                        <span class="text-xl leading-none">{{ $icon }}</span>
-                        <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-medium text-maroon-950 group-hover:text-maroon-700">{{ $file->original_name }}</p>
-                            <p class="text-xs text-maroon-900/40">{{ number_format($file->size / 1024, 1) }} KB · {{ strtoupper($ext) }}</p>
+            {{-- Supporting Documents — collapsible --}}
+            <div class="rounded-2xl border border-maroon-900/10 bg-white shadow-sm overflow-hidden">
+                <details class="group">
+                    <summary class="flex cursor-pointer items-center justify-between px-5 py-3.5 list-none hover:bg-maroon-950/[0.02]">
+                        <div class="flex items-center gap-2">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-maroon-600">Supporting Documents</p>
+                            <span class="rounded-full bg-maroon-100 px-2 py-0.5 text-xs font-bold text-maroon-700">{{ $loa->attachments->count() }}</span>
                         </div>
-                        <span class="shrink-0 text-xs font-semibold text-maroon-700 opacity-0 transition group-hover:opacity-100">Open ↗</span>
-                    </a>
-                @empty
-                    <p class="text-sm italic text-maroon-900/50">No files attached to this application.</p>
-                @endforelse
+                        <span class="text-xs text-maroon-900/40 group-open:hidden">Show ▾</span>
+                        <span class="text-xs text-maroon-900/40 hidden group-open:inline">Hide ▴</span>
+                    </summary>
+                    <div class="border-t border-maroon-900/8 px-5 py-4 space-y-2">
+                        @forelse ($loa->attachments as $file)
+                            @php
+                                $ext  = strtolower(pathinfo($file->original_name, PATHINFO_EXTENSION));
+                                $icon = match(true) {
+                                    in_array($ext, ['jpg','jpeg','png','webp','gif']) => '🖼',
+                                    $ext === 'pdf'                                    => '📋',
+                                    in_array($ext, ['doc','docx'])                   => '📝',
+                                    default                                           => '📄',
+                                };
+                            @endphp
+                            <a href="{{ route('staff.loa.attachment', [$loa, $file]) }}"
+                               target="_blank" rel="noopener"
+                               class="group/file flex items-center gap-3 rounded-xl border border-maroon-900/10 bg-maroon-950/[0.02] px-4 py-2.5 transition hover:border-maroon-900/20 hover:bg-maroon-50">
+                                <span class="text-lg leading-none">{{ $icon }}</span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-maroon-950 group-hover/file:text-maroon-700">{{ $file->original_name }}</p>
+                                    <p class="text-xs text-maroon-900/40">{{ number_format($file->size / 1024, 1) }} KB · {{ strtoupper($ext) }}</p>
+                                </div>
+                                <span class="shrink-0 text-xs font-semibold text-maroon-700 opacity-0 group-hover/file:opacity-100 transition">Open ↗</span>
+                            </a>
+                        @empty
+                            <p class="text-sm italic text-maroon-900/50">No files attached to this application.</p>
+                        @endforelse
+                    </div>
+                </details>
             </div>
 
-            {{-- Rejection details (if rejected) --}}
-            @if ($loa->status === 'rejected' && ($loa->rejectedByActor || $loa->rejection_reason))
-                <div class="rounded-2xl border border-red-200 bg-red-50 p-6 shadow-sm">
-                    <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-red-600">Rejection Details</h2>
-                    @if ($loa->rejectedByActor)
-                        <p class="text-sm text-red-700">
-                            Rejected by <strong>{{ $loa->rejectedByActor->name }}</strong>
-                            ({{ $loa->rejectedByActor->role->label() }})
-                            @if ($loa->rejected_at)
-                                on {{ $loa->rejected_at->format('F j, Y \a\t g:i A') }}
-                            @endif
-                        </p>
-                    @endif
-                    @if ($loa->rejection_reason)
-                        <div class="mt-3 rounded-lg border border-red-200 bg-white px-4 py-3">
-                            <p class="text-xs font-semibold uppercase tracking-wider text-red-500 mb-1">Stated reason</p>
-                            <p class="text-sm text-red-800 whitespace-pre-wrap">{{ $loa->rejection_reason }}</p>
+            {{-- Rejection History — collapsible --}}
+            @php
+                $allRejections = $loa->rejectionHistory;
+                $totalRejections = $allRejections->count();
+            @endphp
+            @if ($totalRejections > 0)
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 shadow-sm overflow-hidden">
+                    <details class="group" @if($loa->status === 'rejected') open @endif>
+                        <summary class="flex cursor-pointer items-center justify-between px-5 py-3.5 list-none hover:bg-amber-100/50">
+                            <div class="flex items-center gap-2">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-amber-700">Rejection History</p>
+                                <span class="rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold text-amber-800">{{ $totalRejections }}</span>
+                            </div>
+                            <span class="text-xs text-amber-600 group-open:hidden">Show ▾</span>
+                            <span class="text-xs text-amber-600 hidden group-open:inline">Hide ▴</span>
+                        </summary>
+
+                        <div class="border-t border-amber-200 px-5 py-4 space-y-3">
+                            @foreach ($allRejections as $entry)
+                                @php
+                                    $cycleLabel = $entry->resubmit_cycle === 0
+                                        ? 'Original submission'
+                                        : 'Resubmission #' . $entry->resubmit_cycle;
+                                    $isLatest = $loop->last && $loa->status === 'rejected';
+                                @endphp
+                                <div class="rounded-xl border {{ $isLatest ? 'border-red-200' : 'border-amber-200' }} bg-white p-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-1.5">
+                                        <div>
+                                            <span class="text-xs font-semibold uppercase tracking-wider {{ $isLatest ? 'text-red-600' : 'text-amber-600' }}">{{ $cycleLabel }}</span>
+                                            <p class="text-sm font-semibold text-maroon-950 mt-0.5">
+                                                Rejected at <strong>{{ $entry->stage_label }}</strong>
+                                            </p>
+                                        </div>
+                                        <span class="text-xs text-maroon-900/50 shrink-0">{{ $entry->rejected_at->format('M j, Y · g:i A') }}</span>
+                                    </div>
+                                    @if ($entry->rejectedByActor)
+                                        <p class="text-xs text-maroon-900/60 mb-2">
+                                            By <strong>{{ $entry->rejectedByActor->name }}</strong> ({{ $entry->rejectedByActor->role->label() }})
+                                        </p>
+                                    @endif
+                                    @if ($entry->reason)
+                                        <p class="text-sm whitespace-pre-wrap rounded-lg {{ $isLatest ? 'bg-red-50 border border-red-100 text-red-800' : 'bg-amber-50 border border-amber-100 text-amber-900' }} px-3 py-2">{{ $entry->reason }}</p>
+                                    @endif
+                                </div>
+                            @endforeach
                         </div>
-                    @endif
+                    </details>
                 </div>
             @endif
+
         </div>
 
         {{-- ── Right column: approval timeline + actions ────────────────────── --}}
-        <div class="space-y-6">
+        <div class="space-y-4">
 
             {{-- Approval timeline --}}
-            <div class="rounded-2xl border border-maroon-900/10 bg-white p-6 shadow-sm">
-                <h2 class="mb-5 text-sm font-semibold uppercase tracking-wider text-maroon-600">Approval Timeline</h2>
+            <div class="rounded-2xl border border-maroon-900/10 bg-white p-5 shadow-sm">
+                <h2 class="mb-4 text-xs font-semibold uppercase tracking-wider text-maroon-600">Approval Timeline</h2>
 
                 @php
                     $stages = [
-                        [
-                            'label'  => 'Department Head',
-                            'status' => $loa->dept_head_status,
-                            'actor'  => $loa->deptHeadActor,
-                            'at'     => $loa->dept_head_at,
-                        ],
-                        [
-                            'label'  => 'SASO Officer',
-                            'status' => $loa->saso_status,
-                            'actor'  => $loa->sasoActor,
-                            'at'     => $loa->saso_at,
-                        ],
-                        [
-                            'label'  => 'Campus Director',
-                            'status' => $loa->campus_director_status,
-                            'actor'  => $loa->campusDirectorActor,
-                            'at'     => $loa->campus_director_at,
-                        ],
+                        ['label' => 'Department Head', 'status' => $loa->dept_head_status, 'actor' => $loa->deptHeadActor, 'at' => $loa->dept_head_at],
+                        ['label' => 'SASO Officer',    'status' => $loa->saso_status,       'actor' => $loa->sasoActor,     'at' => $loa->saso_at],
+                        ['label' => 'Campus Director', 'status' => $loa->campus_director_status, 'actor' => $loa->campusDirectorActor, 'at' => $loa->campus_director_at],
                     ];
                 @endphp
 
-                <ol class="relative space-y-0 border-l-2 border-maroon-900/10 pl-6">
+                <ol class="relative space-y-0 border-l-2 border-maroon-900/10 pl-5">
                     @foreach ($stages as $i => $stage)
                         @php
-                            $s = $stage['status'];
-                            $isDone      = $s?->value === 'approved';
-                            $isRejected  = $s?->value === 'rejected';
-                            $isPending   = $s?->value === 'pending';
-
-                            $dotColor = match(true) {
+                            $s          = $stage['status'];
+                            $isDone     = $s?->value === 'approved';
+                            $isRejected = $s?->value === 'rejected';
+                            $isPending  = $s?->value === 'pending';
+                            $dotColor   = match(true) {
                                 $isDone     => 'bg-emerald-500 ring-emerald-200',
                                 $isRejected => 'bg-red-500 ring-red-200',
                                 $isPending  => 'bg-amber-400 ring-amber-100',
                                 default     => 'bg-maroon-900/15 ring-maroon-900/5',
                             };
-                            $dotIcon = match(true) {
+                            $dotIcon    = match(true) {
                                 $isDone     => '✓',
                                 $isRejected => '✕',
                                 $isPending  => '…',
                                 default     => (string)($i + 1),
                             };
                         @endphp
-                        <li class="relative pb-7 last:pb-0">
-                            {{-- Connector dot --}}
-                            <span class="absolute -left-[1.6rem] flex h-7 w-7 items-center justify-center rounded-full ring-4 text-xs font-bold
-                                         {{ $dotColor }} {{ $isDone ? 'text-white' : ($isRejected ? 'text-white' : ($isPending ? 'text-amber-900' : 'text-maroon-900/40')) }}">
+                        <li class="relative pb-5 last:pb-0">
+                            <span class="absolute -left-[1.45rem] flex h-6 w-6 items-center justify-center rounded-full ring-4 text-[10px] font-bold
+                                         {{ $dotColor }} {{ $isDone || $isRejected ? 'text-white' : ($isPending ? 'text-amber-900' : 'text-maroon-900/40') }}">
                                 {{ $dotIcon }}
                             </span>
-
                             <div class="ml-1">
                                 <p class="text-sm font-semibold text-maroon-950">{{ $stage['label'] }}</p>
-
                                 @if ($isDone || $isRejected)
                                     @if ($stage['actor'])
-                                        <p class="text-xs text-maroon-900/70 mt-0.5">
-                                            {{ $isDone ? 'Approved' : 'Rejected' }} by
-                                            <span class="font-medium text-maroon-950">{{ $stage['actor']->name }}</span>
+                                        <p class="text-xs text-maroon-900/60 mt-0.5">
+                                            {{ $isDone ? 'Approved' : 'Rejected' }} by {{ $stage['actor']->name }}
                                         </p>
                                     @endif
                                     @if ($stage['at'])
-                                        <p class="text-xs text-maroon-900/50 mt-0.5">{{ $stage['at']->format('M j, Y · g:i A') }}</p>
+                                        <p class="text-xs text-maroon-900/40 mt-0.5">{{ $stage['at']->format('M j, Y · g:i A') }}</p>
                                     @endif
                                 @elseif ($isPending)
                                     <p class="mt-0.5 text-xs font-medium text-amber-700">Awaiting action</p>
                                 @else
-                                    <p class="mt-0.5 text-xs text-maroon-900/40">Locked — prior stage pending</p>
+                                    <p class="mt-0.5 text-xs text-maroon-900/40">Locked</p>
                                 @endif
                             </div>
                         </li>
                     @endforeach
                 </ol>
 
-                {{-- Final status --}}
                 @if ($stageName === 'done')
-                    <div class="mt-5 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-center">
+                    <div class="mt-4 rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2.5 text-center">
                         <p class="text-sm font-semibold text-emerald-700">✓ Fully Approved</p>
-                        <p class="text-xs text-emerald-600 mt-0.5">All approval stages completed.</p>                    </div>
+                    </div>
                 @elseif ($loa->status === 'rejected')
-                    <div class="mt-5 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-center">
+                    <div class="mt-4 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-center">
                         <p class="text-sm font-semibold text-red-700">✕ Rejected</p>
-                        <p class="text-xs text-red-600 mt-0.5">Pipeline terminated.</p>
                     </div>
                 @endif
             </div>
 
             {{-- Action buttons --}}
             @canany(['approve', 'reject'], $loa)
-                <div class="rounded-2xl border border-maroon-900/10 bg-white p-5 shadow-sm space-y-3">
-                    <h2 class="text-sm font-semibold uppercase tracking-wider text-maroon-600">Your Action</h2>
+                <div class="rounded-2xl border border-maroon-900/10 bg-white p-4 shadow-sm space-y-2.5">
                     <p class="text-xs text-maroon-900/60">
-                        Acting as <strong>{{ auth()->user()->role->label() }}</strong>.
-                        Stage: <strong>{{ $loa->currentStageLabel() }}</strong>.
+                        Acting as <strong>{{ auth()->user()->role->label() }}</strong> · <strong>{{ $loa->currentStageLabel() }}</strong>
                     </p>
-
                     @can('approve', $loa)
                         <form method="POST" action="{{ route('staff.loa.approve', $loa) }}">
                             @csrf
                             <button type="submit"
-                                    class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
+                                    class="w-full rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-500">
                                 ✓ Approve LOA
                             </button>
                         </form>
                     @endcan
-
                     @can('reject', $loa)
                         <button type="button"
                                 data-reject-trigger
@@ -268,7 +286,7 @@
                 </div>
             @endcanany
 
-            {{-- Navigation --}}
+            {{-- Download + Back --}}
             @if ($loa->status === 'approved')
                 <a href="{{ route('staff.loa.pdf', $loa) }}"
                    class="block w-full rounded-xl bg-maroon-800 px-4 py-2.5 text-center text-sm font-semibold text-white shadow-sm hover:bg-maroon-700">
@@ -282,7 +300,7 @@
         </div>
     </div>
 
-    {{-- Reject modal (same as pipeline, reused here) --}}
+    {{-- Reject modal --}}
     <div id="reject-modal"
          class="fixed inset-0 z-50 hidden items-center justify-center bg-maroon-950/60 backdrop-blur-sm p-4"
          role="dialog" aria-modal="true" aria-labelledby="reject-modal-title">
@@ -324,7 +342,6 @@
 
 @push('scripts')
 <script>
-// ── Reject modal ─────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const modal        = document.getElementById('reject-modal');
     const form         = document.getElementById('reject-form');

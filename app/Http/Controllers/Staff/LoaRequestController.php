@@ -36,7 +36,7 @@ class LoaRequestController extends Controller
         }
 
         $loas = LoaRequest::query()
-            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor', 'rejectedByActor'])
+            ->with(['department', 'program', 'deptHeadActor', 'sasoActor', 'campusDirectorActor'])
             ->scopeForUser($user)
             ->when($filterStatus, fn ($q) => $q->where('status', $filterStatus))
             ->when($filterDept && ! $isDh, fn ($q) => $q->where('department_id', $filterDept))
@@ -86,6 +86,7 @@ class LoaRequestController extends Controller
             'sasoActor',
             'campusDirectorActor',
             'rejectedByActor',
+            'rejectionHistory.rejectedByActor',
         ]);
 
         // Smart back URL — return to wherever the user came from (pipeline or dashboard).

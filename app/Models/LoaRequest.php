@@ -6,13 +6,12 @@ use App\Enums\ApprovalStageStatus;
 use App\Enums\UserRole;
 use App\Mail\LoaApprovedMail;
 use App\Mail\LoaRejectedMail;
+use App\Models\LoaRejectionHistory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Mail;
-
-class LoaRequest extends Model
+use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
 {
     protected $fillable = [
         'control_number',
@@ -43,6 +42,9 @@ class LoaRequest extends Model
         'rejected_at',
         'rejected_by',
         'rejection_reason',
+        'resubmit_token_hash',
+        'resubmit_token_expires_at',
+        'resubmit_count',
     ];
 
     protected function casts(): array
@@ -55,6 +57,7 @@ class LoaRequest extends Model
             'saso_at'                 => 'datetime',
             'campus_director_at'      => 'datetime',
             'rejected_at'             => 'datetime',
+            'resubmit_token_expires_at' => 'datetime',
             'dept_head_status'        => ApprovalStageStatus::class,
             'saso_status'             => ApprovalStageStatus::class,
             'campus_director_status'  => ApprovalStageStatus::class,
@@ -99,6 +102,11 @@ class LoaRequest extends Model
     public function rejectedByActor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    public function rejectionHistory(): HasMany
+    {
+        return $this->hasMany(LoaRejectionHistory::class)->orderBy('rejected_at');
     }
 
     public function isSubmitted(): bool
@@ -329,25 +337,177 @@ class LoaRequest extends Model
             return;
         }
 
-        $now = now();
+        $now        = now();
+        $plainToken = null;
 
-        $this->update([
-            "{$stageKey}_status" => ApprovalStageStatus::Rejected,
-            "{$stageKey}_at"     => $now,
-            "{$stageKey}_by"     => $user->id,
-            'status'             => 'rejected',
-            'rejected_at'        => $now,
-            'rejected_by'        => $user->id,
-            'rejection_reason'   => $reason,
-        ]);
+        \Illuminate\Support\Facades\DB::transaction(function () use ($stageKey, $user, $now, $reason, &$plainToken) {
+            $this->update([
+                "{$stageKey}_status" => ApprovalStageStatus::Rejected,
+                "{$stageKey}_at"     => $now,
+                "{$stageKey}_by"     => $user->id,
+                'status'             => 'rejected',
+                'rejected_at'        => $now,
+                'rejected_by'        => $user->id,
+                'rejection_reason'   => $reason,
+            ]);
 
-        // Notify student — pipeline terminated.
+            // Record this rejection in the history table.
+            $stageLabels = [
+                'dept_head'       => 'Department Head',
+                'saso'            => 'SASO Officer',
+                'campus_director' => 'Campus Director',
+            ];
+            LoaRejectionHistory::create([
+                'loa_request_id' => $this->id,
+                'stage_key'      => $stageKey,
+                'stage_label'    => $stageLabels[$stageKey] ?? ucfirst($stageKey),
+                'rejected_by'    => $user->id,
+                'rejected_at'    => $now,
+                'reason'         => $reason,
+                'resubmit_cycle' => $this->resubmit_count,
+            ]);
+
+            // Issue the 7-day resubmit token atomically with the rejection write.
+            $plainToken = $this->issueResubmitToken();
+        });
+
+        // Send rejection email AFTER the transaction commits.
         try {
             $this->refresh();
             $this->load(['department', 'program', 'rejectedByActor']);
-            Mail::to($this->email)->send(new LoaRejectedMail($this));
+            $resubmitUrl = $plainToken ? url('/loa/resubmit/' . $plainToken) : null;
+            Mail::to($this->email)->send(new LoaRejectedMail($this, $resubmitUrl));
         } catch (\Throwable $e) {
             report($e);
         }
+    }
+
+    // ── Resubmission ──────────────────────────────────────────────────────────
+
+    /**
+     * Issue a 7-day single-use resubmit token.
+     * Returns the plain token (to embed in the email URL).
+     */
+    public function issueResubmitToken(): string
+    {
+        $plain = \Illuminate\Support\Str::random(40);
+
+        $this->update([
+            'resubmit_token_hash'       => hash('sha256', $plain),
+            'resubmit_token_expires_at' => now()->addDays(7),
+        ]);
+
+        return $plain;
+    }
+
+    /**
+     * Find a rejected LOA by its plain resubmit token.
+     * Returns null if the token is invalid, expired, or the LOA is not rejected.
+     */
+    public static function findByResubmitToken(string $plain): ?self
+    {
+        return self::query()
+            ->where('resubmit_token_hash', hash('sha256', $plain))
+            ->where('resubmit_token_expires_at', '>', now())
+            ->where('status', 'rejected')
+            ->first();
+    }
+
+    /**
+     * Reset the LOA for resubmission.
+     * Smart resume: preserves stages that were already approved before the rejection.
+     * Only the rejecting stage and later stages are reset.
+     * Increments the control number suffix (.1, .2 …).
+     */
+    public function resubmit(array $fields): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($fields) {
+            // Refresh to ensure we read the latest rejection fields.
+            $this->refresh();
+
+            // Determine which stage was rejected so we can resume from there.
+            // The rejection_reason/rejected_by fields still hold the last rejection at this point.
+            $rejectedStageKey = $this->rejectionHistory()
+                ->where('resubmit_cycle', $this->resubmit_count)
+                ->orderByDesc('rejected_at')
+                ->value('stage_key');
+
+            $order = ['dept_head', 'saso', 'campus_director'];
+            $rejectedIdx = $rejectedStageKey ? array_search($rejectedStageKey, $order, true) : 0;
+
+            if (! $rejectedStageKey) {
+                // No history row found — should never happen. Log it and fall back to full reset.
+                report(new \RuntimeException("resubmit(): no history row for loa_request_id={$this->id} cycle={$this->resubmit_count}"));
+            }
+
+            // Build stage reset — keep stages before the rejected one, reset from it onward.
+            $stageChanges = [];
+            foreach ($order as $idx => $key) {
+                if ($idx < $rejectedIdx) {
+                    // Stage was approved before this rejection — keep it approved.
+                    // (no change needed — it is already approved in the DB)
+                } elseif ($idx === $rejectedIdx) {
+                    // Restart from the rejecting stage — set to pending.
+                    $stageChanges["{$key}_status"] = ApprovalStageStatus::Pending;
+                    $stageChanges["{$key}_at"]     = null;
+                    $stageChanges["{$key}_by"]     = null;
+                } else {
+                    // Later stages — clear them.
+                    $stageChanges["{$key}_status"] = null;
+                    $stageChanges["{$key}_at"]     = null;
+                    $stageChanges["{$key}_by"]     = null;
+                }
+            }
+
+            $this->update(array_merge([
+                // Increment control number suffix: 0001 → 0001.1 → 0001.2
+                'control_number'    => $this->nextControlNumber(),
+                // Updated fields from student
+                'department_id'     => $fields['department_id'] ?? $this->department_id,
+                'program_id'        => $fields['program_id']    ?? $this->program_id,
+                'year_level'        => $fields['year_level']    ?? $this->year_level,
+                'reason'            => $fields['reason'],
+                'start_date'        => $fields['start_date'],
+                'return_date'       => $fields['return_date'],
+                'parent_full_name'  => $fields['parent_full_name'],
+                'parent_relationship' => $fields['parent_relationship'],
+                'parent_phone'      => $fields['parent_phone'],
+                // Reset overall status
+                'status'            => 'submitted',
+                'submitted_at'      => now(),
+                // Clear rejection fields
+                'rejected_at'       => null,
+                'rejected_by'       => null,
+                'rejection_reason'  => null,
+                // Clear resubmit token (consumed)
+                'resubmit_token_hash'       => null,
+                'resubmit_token_expires_at' => null,
+                'resubmit_count'            => $this->resubmit_count + 1,
+            ], $stageChanges));
+        });
+    }
+
+    /**
+     * Derive the next control number by incrementing the decimal suffix.
+     * EVSU-OC-LOA-2026-0001     → EVSU-OC-LOA-2026-0001.1
+     * EVSU-OC-LOA-2026-0001.1   → EVSU-OC-LOA-2026-0001.2
+     * EVSU-OC-LOA-2026-0001.9   → EVSU-OC-LOA-2026-0001.10
+     */
+    private function nextControlNumber(): string
+    {
+        $current = $this->control_number ?? '';
+
+        if ($current === '') {
+            // Should never happen — control_number is always assigned on submission.
+            report(new \RuntimeException("resubmit() called on LoaRequest #{$this->id} with null control_number"));
+            return 'UNKNOWN.1';
+        }
+
+        if (str_contains($current, '.')) {
+            [$base, $rev] = explode('.', $current, 2);
+            return $base . '.' . ((int) $rev + 1);
+        }
+
+        return $current . '.1';
     }
 }
