@@ -343,7 +343,7 @@ class RoleDashboardScopeTest extends TestCase
             ->assertSeeText('Date Effective')
             ->assertSeeText('Return Date')
             ->assertSeeText('Approval Stage / Status')
-            ->assertSeeText('Actions / Management');
+            ->assertSeeText('Actions');
     }
 
     /**

@@ -17,6 +17,9 @@
                     <a href="{{ route('student.identity') }}" class="inline-flex items-center justify-center rounded-xl bg-maroon-800 px-6 py-3.5 text-center text-base font-semibold text-cream-50 hover:bg-maroon-700">
                         Request LOA
                     </a>
+                    <a href="{{ route('student.status') }}" class="inline-flex items-center justify-center rounded-xl border border-maroon-800/20 bg-white px-6 py-3.5 text-center text-base font-semibold text-maroon-900 hover:bg-cream-100">
+                        Check LOA Status
+                    </a>
                     <a href="{{ route('login') }}" class="inline-flex items-center justify-center rounded-xl border border-maroon-800/20 bg-white px-6 py-3.5 text-center text-base font-semibold text-maroon-900 hover:bg-cream-100">
                         Staff login
                     </a>

@@ -79,7 +79,7 @@
         {{-- Active filter tags + result count --}}
         @if ($filterSearch || $filterStatus || $filterDept)
             <div class="flex w-full flex-wrap items-center gap-2 border-t border-maroon-900/8 pt-3">
-                <span class="text-xs text-maroon-900/50">Showing {{ $loas->count() }} result{{ $loas->count() !== 1 ? 's' : '' }}:</span>
+                <span class="text-xs text-maroon-900/50">Showing {{ $loas->total() }} result{{ $loas->total() !== 1 ? 's' : '' }}:</span>
                 @if ($filterSearch)
                     <span class="rounded-full bg-maroon-100 px-3 py-1 text-xs font-semibold text-maroon-800">"{{ $filterSearch }}"</span>
                 @endif
@@ -204,6 +204,9 @@
                 </tbody>
             </table>
         </div>
+        @if ($loas->hasPages())
+            <div class="mt-4 px-1">{{ $loas->links() }}</div>
+        @endif
     @endif
 
     {{-- Reject modal --}}

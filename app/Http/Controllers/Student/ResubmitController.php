@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Student;
 
 use App\Http\Controllers\Controller;
+use App\Enums\UserRole;
+use App\Mail\LoaResubmittedStaffMail;
 use App\Mail\LoaSubmittedMail;
 use App\Models\Department;
 use App\Models\LoaRequest;
 use App\Models\Program;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -110,14 +113,21 @@ class ResubmitController extends Controller
             }
         }
 
-        // Send confirmation email — same as the original submission email.
+        // Send confirmation email to student.
         $fresh = $loa->fresh();
         try {
             $fresh->load(['department', 'program', 'attachments']);
             Mail::to($fresh->email)->send(new LoaSubmittedMail($fresh));
         } catch (\Throwable $e) {
             report($e);
-            // Non-fatal — resubmission is already recorded.
+        }
+
+        // Notify the staff who need to act on the resubmission.
+        // Find users whose role matches the now-pending stage.
+        try {
+            $this->notifyPendingStageStaff($fresh);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return redirect()
@@ -139,6 +149,41 @@ class ResubmitController extends Controller
         return view('student.resubmit-done', [
             'control_number' => $controlNumber,
         ]);
+    }
+
+    // ── Staff resubmit notification ───────────────────────────────────────────
+
+    private function notifyPendingStageStaff(LoaRequest $loa): void
+    {
+        $fresh = $loa->fresh(['department']);
+
+        // Determine the pending stage
+        $stage = $fresh->determineCurrentStage();
+
+        $roleMap = [
+            'dept_head'       => UserRole::DepartmentHead,
+            'saso'            => UserRole::SasoOfficer,
+            'campus_director' => UserRole::CampusDirector,
+        ];
+
+        if (! isset($roleMap[$stage])) {
+            return;
+        }
+
+        $targetRole = $roleMap[$stage];
+
+        $staffQuery = User::query()
+            ->where('role', $targetRole->value)
+            ->whereNotNull('invitation_accepted_at');
+
+        // DH is dept-scoped — only notify the DH of the student's department
+        if ($targetRole === UserRole::DepartmentHead && $fresh->department_id) {
+            $staffQuery->where('department_id', $fresh->department_id);
+        }
+
+        $staffQuery->each(function (User $staff) use ($fresh) {
+            Mail::to($staff->email)->send(new LoaResubmittedStaffMail($fresh, $staff));
+        });
     }
 
     // ── Token resolver ────────────────────────────────────────────────────────

@@ -62,8 +62,13 @@
         <div>
             <p class="mb-2 text-sm font-semibold text-maroon-900">What happens next</p>
             <p class="text-sm leading-relaxed text-maroon-800/80">
-                Your Department Head will review your application and may contact your parent or guardian at the number you provided.
-                You will receive email updates as your request moves through each approval step.
+                Your Department Head will review your application first, followed by the SASO Officer and Campus Director.
+                You will receive an email update at each step. If your request is not approved, you will receive a link to resubmit with any corrections.
+            </p>
+            <p class="mt-2 text-sm text-maroon-800/80">
+                You can also check your application status anytime at
+                <a href="{{ route('student.status') }}" class="font-semibold text-maroon-700 underline underline-offset-2">Check LOA Status</a>
+                using your control number above.
             </p>
         </div>
 

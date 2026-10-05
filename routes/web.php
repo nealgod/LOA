@@ -11,6 +11,7 @@ use App\Http\Controllers\Staff\ReportsController;
 use App\Http\Controllers\Student\IdentityController;
 use App\Http\Controllers\Student\LoaFormController;
 use App\Http\Controllers\Student\ResubmitController;
+use App\Http\Controllers\Student\StatusController;
 use Illuminate\Support\Facades\Route;
 
 // ── Public ────────────────────────────────────────────────────────────────────
@@ -93,3 +94,8 @@ Route::post('/loa/resubmit/{token}',      [ResubmitController::class, 'store'])
     ->middleware('throttle:5,1')
     ->name('student.resubmit.store');
 Route::get('/loa/resubmit/{token}/done',  [ResubmitController::class, 'done'])->name('student.resubmit.done');
+
+// ── LOA status check (public — no login needed) ───────────────────────────────
+Route::match(['get', 'post'], '/loa/status', [StatusController::class, 'show'])
+    ->middleware('throttle:10,1')
+    ->name('student.status');

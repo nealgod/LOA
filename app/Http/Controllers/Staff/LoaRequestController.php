@@ -46,7 +46,8 @@ class LoaRequestController extends Controller
                    ->orWhere('control_number', 'like', "%{$filterSearch}%");
             }))
             ->latest('submitted_at')
-            ->get();
+            ->paginate(25)
+            ->withQueryString();
 
         $departments = \App\Models\Department::query()->orderBy('name')->get(['id', 'code', 'name']);
 
