@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Staff;
 
 use App\Http\Controllers\Controller;
+use App\Mail\LoaDiscontinuedMail;
 use App\Models\LoaAttachment;
 use App\Models\LoaRequest;
 use App\Services\LoaPdfGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -87,6 +89,7 @@ class LoaRequestController extends Controller
             'sasoActor',
             'campusDirectorActor',
             'rejectedByActor',
+            'discontinuedByActor',
             'rejectionHistory.rejectedByActor',
         ]);
 
@@ -137,5 +140,31 @@ class LoaRequestController extends Controller
         $loaRequest->markRejectedBy($user, $request->input('reason'));
 
         return redirect()->route('staff.pipeline', $request->only(['status', 'department_id', 'search']))->with('status', "LOA {$loaRequest->control_number} rejected by {$user->role->label()}.");
+    }
+
+    public function discontinue(Request $request, LoaRequest $loaRequest): RedirectResponse
+    {
+        $this->authorize('discontinue', $loaRequest);
+
+        $request->validate([
+            'reason' => ['required', 'string', 'max:2000'],
+        ], [
+            'reason.required' => 'A reason for discontinuation is required.',
+        ]);
+
+        $user = $request->user();
+        $loaRequest->markDiscontinued($user, $request->input('reason'));
+
+        // Notify student
+        try {
+            $loaRequest->load(['department', 'program', 'discontinuedByActor']);
+            Mail::to($loaRequest->email)->send(new LoaDiscontinuedMail($loaRequest));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return redirect()
+            ->route('staff.loa.show', $loaRequest)
+            ->with('status', "LOA {$loaRequest->control_number} marked as discontinued.");
     }
 }

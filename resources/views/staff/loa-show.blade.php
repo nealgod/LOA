@@ -136,6 +136,28 @@
             </div>
 
             {{-- Rejection History — collapsible --}}
+            {{-- Discontinuation details --}}
+            @if ($loa->status === 'discontinued')
+                <div class="rounded-2xl border border-gray-300 bg-gray-50 p-5 shadow-sm">
+                    <h2 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-600">Discontinuation Details</h2>
+                    @if ($loa->discontinuedByActor)
+                        <p class="text-sm text-gray-700">
+                            Recorded by <strong>{{ $loa->discontinuedByActor->name }}</strong>
+                            ({{ $loa->discontinuedByActor->role->label() }})
+                            @if ($loa->discontinued_at)
+                                on {{ $loa->discontinued_at->format('F j, Y \a\t g:i A') }}
+                            @endif
+                        </p>
+                    @endif
+                    @if ($loa->discontinuation_reason)
+                        <div class="mt-3 rounded-lg border border-gray-200 bg-white px-4 py-3">
+                            <p class="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Reason</p>
+                            <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $loa->discontinuation_reason }}</p>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
             @php
                 $allRejections = $loa->rejectionHistory;
                 $totalRejections = $allRejections->count();
@@ -259,6 +281,13 @@
                 @endif
             </div>
 
+            {{-- Status flash --}}
+            @if (session('status'))
+                <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700">
+                    {{ session('status') }}
+                </div>
+            @endif
+
             {{-- Action buttons --}}
             @canany(['approve', 'reject'], $loa)
                 <div class="rounded-2xl border border-maroon-900/10 bg-white p-4 shadow-sm space-y-2.5">
@@ -285,6 +314,17 @@
                     @endcan
                 </div>
             @endcanany
+
+            {{-- Discontinue button (shown separately — available even after approval) --}}
+            @can('discontinue', $loa)
+                <button type="button"
+                        data-discontinue-trigger
+                        data-control="{{ $loa->control_number }}"
+                        data-action="{{ route('staff.loa.discontinue', $loa) }}"
+                        class="block w-full rounded-xl border border-gray-400 bg-white px-4 py-2.5 text-center text-sm font-semibold text-gray-600 shadow-sm hover:bg-gray-50">
+                    Mark as Discontinued
+                </button>
+            @endcan
 
             {{-- Download + Back --}}
             @if ($loa->status === 'approved')
@@ -338,6 +378,47 @@
         </div>
     </div>
 
+    {{-- Discontinue modal --}}
+    <div id="discontinue-modal"
+         class="fixed inset-0 z-50 hidden items-center justify-center bg-maroon-950/60 backdrop-blur-sm p-4"
+         role="dialog" aria-modal="true" aria-labelledby="discontinue-modal-title">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+            <div class="border-b border-maroon-900/10 px-6 py-4">
+                <p class="text-xs font-semibold uppercase tracking-wider text-gray-600">Discontinue Application</p>
+                <h3 id="discontinue-modal-title" class="mt-1 text-lg font-bold text-maroon-950">
+                    Discontinue <span id="discontinue-control-display" class="font-mono"></span>
+                </h3>
+            </div>
+            <form id="discontinue-form" method="POST">
+                @csrf
+                <div class="px-6 py-5 space-y-4">
+                    <p class="text-sm text-maroon-900/70">
+                        This will mark the LOA as <strong>Discontinued / Withdrawn</strong>.
+                        The student will receive an email notification.
+                    </p>
+                    <div>
+                        <label for="discontinue-reason" class="block text-sm font-medium text-maroon-900 mb-1">
+                            Reason <span class="text-red-600">*</span>
+                        </label>
+                        <textarea id="discontinue-reason" name="reason" rows="3" required
+                                  placeholder="e.g. Student withdrew request, Student did not depart…"
+                                  class="w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-gray-500 resize-none"></textarea>
+                    </div>
+                </div>
+                <div class="flex items-center justify-end gap-3 border-t border-maroon-900/10 px-6 py-4">
+                    <button type="button" id="discontinue-cancel"
+                            class="rounded-lg border border-maroon-900/20 bg-white px-4 py-2 text-sm font-semibold text-maroon-700 hover:bg-maroon-50">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="rounded-lg bg-gray-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-gray-500">
+                        Confirm Discontinuation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 @endsection
 
 @push('scripts')
@@ -368,6 +449,34 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     cancelBtn?.addEventListener('click', close);
     modal?.addEventListener('click', e => { if (e.target === modal) close(); });
+
+    // ── Discontinue modal ─────────────────────────────────────────────────────
+    const dModal       = document.getElementById('discontinue-modal');
+    const dForm        = document.getElementById('discontinue-form');
+    const dControlLabel= document.getElementById('discontinue-control-display');
+    const dReasonField = document.getElementById('discontinue-reason');
+    const dCancelBtn   = document.getElementById('discontinue-cancel');
+
+    const dOpen = (control, action) => {
+        dControlLabel.textContent = control;
+        dForm.action = action;
+        dReasonField.value = '';
+        dModal.classList.remove('hidden');
+        dModal.classList.add('flex');
+        dReasonField.focus();
+    };
+    const dClose = () => {
+        dModal.classList.add('hidden');
+        dModal.classList.remove('flex');
+        dReasonField.value = '';
+    };
+
+    document.querySelectorAll('[data-discontinue-trigger]').forEach(btn => {
+        btn.addEventListener('click', () => dOpen(btn.dataset.control, btn.dataset.action));
+    });
+    dCancelBtn?.addEventListener('click', dClose);
+    dModal?.addEventListener('click', e => { if (e.target === dModal) dClose(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { close(); dClose(); } });
 });
 </script>
 @endpush

@@ -16,6 +16,8 @@ class StaffUsersSeeder extends Seeder
 
         $dcs = Department::query()->where('code', 'DCS')->first();
         $dte = Department::query()->where('code', 'DTE')->first();
+        $htm = Department::query()->where('code', 'HTM')->orWhere('code', 'DBM')->first();
+        $dit = Department::query()->where('code', 'DIT')->first();
 
         $users = [
             [
@@ -25,16 +27,28 @@ class StaffUsersSeeder extends Seeder
                 'department_id' => null,
             ],
             [
-                'name' => 'Joseph Jaymel S. Morphos',
+                'name' => 'Engr. Joseph Jaymel S. Morpos, MSIT',
                 'email' => 'dcs.head@evsu.edu.ph',
                 'role' => UserRole::DepartmentHead,
                 'department_id' => $dcs?->id,
             ],
             [
-                'name' => 'DTE Department Head',
+                'name' => 'Dr. Guillermo M. Sodomia',
                 'email' => 'dte.head@evsu.edu.ph',
                 'role' => UserRole::DepartmentHead,
                 'department_id' => $dte?->id,
+            ],
+            [
+                'name' => 'Prof. Lyra Calvez',
+                'email' => 'htm.head@evsu.edu.ph',
+                'role' => UserRole::DepartmentHead,
+                'department_id' => $htm?->id,
+            ],
+            [
+                'name' => 'Prof. Alan Reynaldo E. Mabitad',
+                'email' => 'dit.head@evsu.edu.ph',
+                'role' => UserRole::DepartmentHead,
+                'department_id' => $dit?->id,
             ],
             [
                 'name' => 'Dr. Joergen T. Arradaza, Jr.',
@@ -49,13 +63,13 @@ class StaffUsersSeeder extends Seeder
                 'department_id' => null,
             ],
             [
-                'name' => 'Registrar',
+                'name' => 'Jonnah R. Benitez, MAEd',
                 'email' => 'registrar@evsu.edu.ph',
                 'role' => UserRole::Registrar,
                 'department_id' => null,
             ],
             [
-                'name' => 'Guidance Counselor',
+                'name' => 'Charlene Pita',
                 'email' => 'guidance@evsu.edu.ph',
                 'role' => UserRole::Guidance,
                 'department_id' => null,

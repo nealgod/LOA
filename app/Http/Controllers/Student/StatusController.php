@@ -17,22 +17,14 @@ class StatusController extends Controller
         if ($request->isMethod('post')) {
             $request->validate([
                 'control_number' => ['required', 'string', 'max:30'],
-                'email'          => [
-                    'required',
-                    'email',
-                    'max:255',
-                    function (string $attribute, mixed $value, \Closure $fail): void {
-                        if (! str_ends_with(strtolower((string) $value), '@evsu.edu.ph')) {
-                            $fail('Only official EVSU email addresses (@evsu.edu.ph) are accepted.');
-                        }
-                    },
-                ],
+                'student_id'     => ['required', 'string', 'regex:/^\d{4}-\d{4,6}$/'],
             ], [
                 'control_number.required' => 'Please enter your control number.',
-                'email.required'          => 'Please enter your EVSU email address.',
+                'student_id.required'     => 'Please enter your student ID number.',
+                'student_id.regex'        => 'Student ID must follow the format YYYY-NNNNN, e.g. 2021-12345.',
             ]);
 
-            // Both control number AND email must match — prevents accidental cross-student lookup.
+            // Both control number AND student ID must match — prevents cross-student lookup.
             $loa = LoaRequest::query()
                 ->with([
                     'department',
@@ -44,8 +36,8 @@ class StatusController extends Controller
                     'rejectionHistory.rejectedByActor',
                 ])
                 ->where('control_number', trim($request->input('control_number')))
-                ->whereRaw('LOWER(email) = ?', [strtolower(trim($request->input('email')))])
-                ->whereIn('status', ['submitted', 'approved', 'rejected'])
+                ->where('student_id', trim($request->input('student_id')))
+                ->whereIn('status', ['submitted', 'approved', 'rejected', 'discontinued'])
                 ->first();
 
             if (! $loa) {

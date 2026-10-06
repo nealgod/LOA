@@ -30,8 +30,8 @@ class AcademicStructureSeeder extends Seeder
                 ],
             ],
             [
-                'code' => 'DBM',
-                'name' => 'Department of Business Management',
+                'code' => 'HTM',
+                'name' => 'Hospitality Management (HTM) Department',
                 'programs' => [
                     ['code' => 'BSHM', 'name' => 'Bachelor of Science in Hospitality Management (BSHM)'],
                 ],
@@ -54,6 +54,11 @@ class AcademicStructureSeeder extends Seeder
                 ],
             ],
         ];
+
+        Department::query()->where('code', 'DBM')->update([
+            'code' => 'HTM',
+            'name' => 'Hospitality Management (HTM) Department',
+        ]);
 
         Program::query()->delete();
 

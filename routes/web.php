@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/staff/loa/{loaRequest}/files/{attachment}',     [LoaRequestController::class, 'attachment'])->name('staff.loa.attachment');
         Route::post('/staff/loa/{loaRequest}/approve',               [LoaRequestController::class, 'approve'])->name('staff.loa.approve');
         Route::post('/staff/loa/{loaRequest}/reject',                [LoaRequestController::class, 'reject'])->name('staff.loa.reject');
+        Route::post('/staff/loa/{loaRequest}/discontinue',           [LoaRequestController::class, 'discontinue'])->name('staff.loa.discontinue');
     });
 
     // Admin — user management (Administrator role only, enforced in controller)

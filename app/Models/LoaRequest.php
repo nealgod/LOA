@@ -11,7 +11,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
+use Illuminate\Support\Facades\Mail;
+
+class LoaRequest extends Model
 {
     protected $fillable = [
         'control_number',
@@ -42,6 +44,9 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
         'rejected_at',
         'rejected_by',
         'rejection_reason',
+        'discontinued_at',
+        'discontinued_by',
+        'discontinuation_reason',
         'resubmit_token_hash',
         'resubmit_token_expires_at',
         'resubmit_count',
@@ -57,6 +62,7 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
             'saso_at'                 => 'datetime',
             'campus_director_at'      => 'datetime',
             'rejected_at'             => 'datetime',
+            'discontinued_at'         => 'datetime',
             'resubmit_token_expires_at' => 'datetime',
             'dept_head_status'        => ApprovalStageStatus::class,
             'saso_status'             => ApprovalStageStatus::class,
@@ -102,6 +108,11 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
     public function rejectedByActor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'rejected_by');
+    }
+
+    public function discontinuedByActor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'discontinued_by');
     }
 
     public function rejectionHistory(): HasMany
@@ -178,6 +189,10 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
             return 'rejected';
         }
 
+        if ($this->status === 'discontinued') {
+            return 'discontinued';
+        }
+
         $dh   = $this->dept_head_status;
         $saso = $this->saso_status;
         $cd   = $this->campus_director_status;
@@ -208,6 +223,7 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
             'campus_director' => 'Pending: Campus Director',
             'done'            => 'Fully Approved',
             'rejected'        => 'Rejected',
+            'discontinued'    => 'Withdrawn / Discontinued',
             default           => 'Unknown',
         };
     }
@@ -257,6 +273,10 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
 
     public function canBeApprovedBy(User $user): bool
     {
+        if ($this->status !== 'submitted') {
+            return false;
+        }
+
         $stageKey = $this->roleStageKey($user);
         if ($stageKey === null) {
             return false;
@@ -382,8 +402,43 @@ use Illuminate\Support\Facades\Mail;class LoaRequest extends Model
         }
     }
 
-    // ── Resubmission ──────────────────────────────────────────────────────────
+    // ── Discontinuation ───────────────────────────────────────────────────────
 
+    /**
+     * A LOA can be discontinued if it is submitted (before full approval)
+     * or approved (student decided not to leave / did not depart).
+     * Rejected and already-discontinued LOAs cannot be discontinued again.
+     */
+    public function canBeDiscontinuedBy(User $user): bool
+    {
+        if (! in_array($this->status, ['submitted', 'approved'], true)) {
+            return false;
+        }
+
+        return match ($user->role) {
+            UserRole::Administrator,
+            UserRole::SasoOfficer,
+            UserRole::CampusDirector,
+            UserRole::Registrar    => true,
+            UserRole::DepartmentHead => $user->department_id
+                && (int) $user->department_id === (int) $this->department_id,
+            default => false,
+        };
+    }
+
+    public function markDiscontinued(User $user, ?string $reason = null): void
+    {
+        $now = now();
+
+        $this->update([
+            'status'                => 'discontinued',
+            'discontinued_at'       => $now,
+            'discontinued_by'       => $user->id,
+            'discontinuation_reason'=> $reason,
+        ]);
+    }
+
+    // ── Resubmission ──────────────────────────────────────────────────────────
     /**
      * Issue a 7-day single-use resubmit token.
      * Returns the plain token (to embed in the email URL).

@@ -5,8 +5,8 @@
 @section('content')
 <x-page-shell eyebrow="LOA Status Check" title="Check your application status" width="2xl">
     <x-slot:lead>
-        Enter your control number and the EVSU email address you used when you submitted your request.
-        Both must match to view your application status.
+        Enter your control number and student ID number to view your application status.
+        Both must match to protect your information.
     </x-slot:lead>
 
     {{-- Search form --}}
@@ -25,14 +25,16 @@
             @enderror
         </div>
         <div>
-            <label for="email" class="block text-sm font-medium text-maroon-900">EVSU Email Address</label>
-            <input id="email" name="email" type="email"
-                   value="{{ old('email') }}"
-                   required autocomplete="email"
-                   placeholder="name@evsu.edu.ph"
-                   class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 text-base outline-none focus:ring-2 focus:ring-maroon-700 @error('email') border-red-400 bg-red-50 @enderror">
-            <p class="mt-1 text-xs text-maroon-800/60">The same email you used when submitting your LOA request.</p>
-            @error('email')
+            <label for="student_id" class="block text-sm font-medium text-maroon-900">Student ID Number</label>
+            <input id="student_id" name="student_id" type="text"
+                   value="{{ old('student_id') }}"
+                   required autocomplete="off"
+                   inputmode="numeric"
+                   placeholder="e.g. 2021-12345"
+                   data-student-id-input
+                   class="mt-1 w-full rounded-xl border border-maroon-900/15 bg-cream-50 px-3 py-3 font-mono text-base outline-none focus:ring-2 focus:ring-maroon-700 @error('student_id') border-red-400 bg-red-50 @enderror">
+            <p class="mt-1 text-xs text-maroon-800/60">The student ID you entered when submitting your LOA request.</p>
+            @error('student_id')
                 <p class="mt-1 text-sm text-maroon-600">{{ $message }}</p>
             @enderror
         </div>
@@ -47,7 +49,7 @@
         <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 p-5">
             <p class="text-sm font-semibold text-red-700">No application found.</p>
             <p class="mt-1 text-sm text-red-700/80">
-                Make sure you entered the control number and email address exactly as they appear in your confirmation email.
+                Make sure you entered the control number and student ID exactly as they appear in your confirmation email.
                 The control number looks like <span class="font-mono font-semibold">EVSU-OC-LOA-2026-0001</span>.
             </p>
         </div>
@@ -75,10 +77,12 @@
                         <p class="text-xs font-semibold uppercase tracking-widest text-maroon-700">Control Number</p>
                         <p class="mt-0.5 font-mono text-xl font-bold text-maroon-950">{{ $loa->control_number }}</p>
                     </div>
-                    @if ($stageName === 'done')
+                    @if ($stageName === 'done' || $loa->status === 'approved')
                         <span class="rounded-full border border-emerald-600 bg-emerald-600 px-3 py-1 text-sm font-semibold text-white">✓ Fully Approved</span>
                     @elseif ($loa->status === 'rejected')
                         <span class="rounded-full border border-red-600 bg-red-600 px-3 py-1 text-sm font-semibold text-white">✕ Not Approved</span>
+                    @elseif ($loa->status === 'discontinued')
+                        <span class="rounded-full border border-gray-500 bg-gray-500 px-3 py-1 text-sm font-semibold text-white">Discontinued / Withdrawn</span>
                     @elseif ($stageStatus)
                         <span class="{{ $stageStatus->badgeClasses() }}">{{ $loa->currentStageLabel() }}</span>
                     @endif
@@ -167,7 +171,7 @@
                     @endforeach
                 </ol>
 
-                @if ($stageName === 'done')
+                @if ($stageName === 'done' || $loa->status === 'approved')
                     <div class="mt-4 rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3 text-center">
                         <p class="text-sm font-semibold text-emerald-700">✓ Fully Approved</p>
                         <p class="text-xs text-emerald-600 mt-0.5">All approval stages completed. Please proceed to the Registrar's Office.</p>
@@ -179,6 +183,14 @@
                             <p class="text-xs text-red-700/80 mt-1">Reason: {{ $loa->rejection_reason }}</p>
                         @endif
                         <p class="text-xs text-red-700/70 mt-1">Check your email for a resubmission link if you wish to address the concerns raised.</p>
+                    </div>
+                @elseif ($loa->status === 'discontinued')
+                    <div class="mt-4 rounded-lg bg-gray-100 border border-gray-300 px-4 py-3">
+                        <p class="text-sm font-semibold text-gray-800">Application Discontinued / Withdrawn</p>
+                        @if ($loa->discontinuation_reason)
+                            <p class="text-xs text-gray-700 mt-1">Reason: {{ $loa->discontinuation_reason }}</p>
+                        @endif
+                        <p class="text-xs text-gray-600 mt-1">If you have questions or believe this was done in error, please contact the SASO Office or your Department Head.</p>
                     </div>
                 @endif
             </div>

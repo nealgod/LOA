@@ -4,12 +4,15 @@ namespace Tests\Feature;
 
 use App\Enums\ApprovalStageStatus;
 use App\Enums\UserRole;
+use App\Mail\LoaDiscontinuedMail;
+use App\Mail\LoaRejectedMail;
 use App\Models\Department;
 use App\Models\LoaAccessToken;
 use App\Models\LoaRequest;
 use App\Models\Program;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -456,6 +459,152 @@ class ApprovalPipelineTest extends TestCase
         $this->assertCount(1, $attachments);
         $this->assertSame('LOA-' . $loa->control_number . '.pdf', $attachments[0]->as);
         $this->assertSame('application/pdf', $attachments[0]->mime);
+    }
+
+    public function test_dh_reject_emails_student(): void
+    {
+        Mail::fake();
+
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $dh = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
+
+        $this->actingAs($dh)
+            ->post(route('staff.loa.reject', $loa), ['reason' => 'Incomplete documents.'])
+            ->assertRedirect(route('staff.pipeline'));
+
+        $this->assertSame('rejected', $loa->fresh()->status);
+
+        Mail::assertSent(LoaRejectedMail::class, function ($mail) use ($loa) {
+            return $mail->loa->id === $loa->id && $mail->hasTo($loa->email);
+        });
+    }
+
+    public function test_saso_reject_emails_student(): void
+    {
+        Mail::fake();
+
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $dh = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
+        $loa->markApprovedBy($dh);
+
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+
+        $this->actingAs($saso)
+            ->post(route('staff.loa.reject', $loa), ['reason' => 'SASO grounds for rejection.'])
+            ->assertRedirect(route('staff.pipeline'));
+
+        $this->assertSame('rejected', $loa->fresh()->status);
+
+        Mail::assertSent(LoaRejectedMail::class, function ($mail) use ($loa) {
+            return $mail->loa->id === $loa->id && $mail->hasTo($loa->email);
+        });
+    }
+
+    public function test_campus_director_reject_emails_student(): void
+    {
+        Mail::fake();
+
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $dh = User::factory()->create(['role' => UserRole::DepartmentHead, 'department_id' => $this->dcs->id]);
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+        $cd = User::factory()->create(['role' => UserRole::CampusDirector]);
+
+        $loa->markApprovedBy($dh);
+        $loa->markApprovedBy($saso);
+
+        $this->assertTrue($loa->fresh()->campus_director_status->is(ApprovalStageStatus::Pending));
+
+        $this->actingAs($cd)
+            ->post(route('staff.loa.reject', $loa), ['reason' => 'Campus Director disapproved.'])
+            ->assertRedirect(route('staff.pipeline'));
+
+        $this->assertSame('rejected', $loa->fresh()->status);
+        $this->assertTrue($loa->fresh()->campus_director_status->is(ApprovalStageStatus::Rejected));
+
+        Mail::assertSent(LoaRejectedMail::class, function ($mail) use ($loa) {
+            return $mail->loa->id === $loa->id && $mail->hasTo($loa->email);
+        });
+    }
+
+    public function test_student_can_check_status_using_student_id_and_control_number(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+
+        $this->post(route('student.status'), [
+            'control_number' => $loa->control_number,
+            'student_id'     => $loa->student_id,
+        ])
+        ->assertOk()
+        ->assertSeeText($loa->control_number)
+        ->assertSeeText($loa->full_name)
+        ->assertDontSeeText('No application found.');
+    }
+
+    public function test_student_can_check_status_of_discontinued_loa(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+        $loa->markDiscontinued($saso, 'Student withdrew request voluntarily.');
+
+        $this->post(route('student.status'), [
+            'control_number' => $loa->control_number,
+            'student_id'     => $loa->student_id,
+        ])
+        ->assertOk()
+        ->assertSeeText($loa->control_number)
+        ->assertSeeText('Discontinued / Withdrawn')
+        ->assertSeeText('Student withdrew request voluntarily.')
+        ->assertDontSeeText('No application found.');
+    }
+
+    public function test_staff_can_discontinue_loa_and_email_student(): void
+    {
+        Mail::fake();
+
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+
+        $this->actingAs($saso)
+            ->post(route('staff.loa.discontinue', $loa), ['reason' => 'Student opted for study leave cancellation.'])
+            ->assertRedirect(route('staff.loa.show', $loa))
+            ->assertSessionHas('status');
+
+        $fresh = $loa->fresh();
+        $this->assertSame('discontinued', $fresh->status);
+        $this->assertSame('Student opted for study leave cancellation.', $fresh->discontinuation_reason);
+        $this->assertSame($saso->id, $fresh->discontinued_by);
+        $this->assertNotNull($fresh->discontinued_at);
+
+        Mail::assertSent(LoaDiscontinuedMail::class, function ($mail) use ($loa) {
+            return $mail->loa->id === $loa->id && $mail->hasTo($loa->email);
+        });
+    }
+
+    public function test_cross_dept_dh_cannot_discontinue_loa(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $dteHead = User::factory()->create([
+            'role' => UserRole::DepartmentHead,
+            'department_id' => $this->dte->id,
+        ]);
+
+        $this->actingAs($dteHead)
+            ->post(route('staff.loa.discontinue', $loa), ['reason' => 'Test reason'])
+            ->assertForbidden();
+
+        $this->assertSame('submitted', $loa->fresh()->status);
+    }
+
+    public function test_cannot_discontinue_already_rejected_loa(): void
+    {
+        $loa = $this->createSubmittedLoa($this->dcs, $this->bsit);
+        $loa->forceFill(['status' => 'rejected'])->save();
+
+        $saso = User::factory()->create(['role' => UserRole::SasoOfficer]);
+
+        $this->actingAs($saso)
+            ->post(route('staff.loa.discontinue', $loa), ['reason' => 'Test reason'])
+            ->assertForbidden();
     }
 
     private function seedLoas(int $dcsCount, int $dteCount): void
